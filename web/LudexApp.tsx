@@ -35,6 +35,7 @@ import { Feed } from "./components/Feed";
 import { PremiereStage } from "./components/PremiereStage";
 import { Library } from "./components/Library";
 import { Profile } from "./components/Profile";
+import { Companion } from "./components/Companion";
 import { AuthForm, LogForm, ShowcaseEditor } from "./components/Forms";
 import { Artwork, Avatar, Empty, Modal } from "./components/Primitives";
 type Page =
@@ -1199,25 +1200,28 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
         open={companion}
         onClose={() => setCompanion(false)}
         title="A companion for your curiosity."
-        description="Stage A builds your journal. Contextual AI arrives in the companion stage."
+        description="Recommendations rooted in your journal. Every change waits for your confirmation."
+        wide
       >
-        <div className="companion-icon">
-          <Sparkle size={33} />
-        </div>
-        <p className="companion-copy">
-          Grounded recommendations, your remembered favorites, and a little help
-          choosing what’s next. Every change to your journal will ask for your
-          confirmation.
-        </p>
-        <button
-          className="button full"
-          onClick={() => {
+        <Companion
+          key={session?.user.id ?? "guest"}
+          client={client}
+          signedIn={Boolean(session)}
+          sessionKey={session?.user.id ?? null}
+          onSignIn={() => {
             setCompanion(false);
-            go("discover");
+            setAuth(true);
           }}
-        >
-          Explore with search <MagnifyingGlass size={16} />
-        </button>
+          onConfirmed={async () => {
+            await data.refresh();
+          }}
+          onTitle={(titleId) => {
+            setCompanion(false);
+            const title = catalog.find((entry) => entry.id === titleId);
+            if (title) openTitle(title);
+            else void client.getTitle(titleId).then(openTitle).catch((error) => notify(error.message));
+          }}
+        />
       </Modal>
       <Modal
         open={notifications}
