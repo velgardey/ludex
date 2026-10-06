@@ -1,9 +1,5 @@
 export type AssistantStatus =
-  | "ready"
-  | "unconfigured"
-  | "allowance-exhausted"
-  | "disabled"
-  | (string & {});
+  "ready" | "unconfigured" | "allowance-exhausted" | "disabled" | (string & {});
 
 export type AssistantAllowance = {
   remaining: number;
@@ -38,6 +34,7 @@ export type AssistantMessage = {
 
 export type AssistantState = {
   status: AssistantStatus;
+  cloudConsent?: boolean;
   allowance?: AssistantAllowance | null;
   messages: AssistantMessage[];
 };
@@ -55,8 +52,12 @@ export function createAssistantClient(requester: AssistantRequest) {
     },
     async sendMessage(text: string, requestId: string): Promise<unknown> {
       if (!text.trim()) throw new Error("An assistant message is required.");
-      if (!requestId.trim()) throw new Error("An assistant request ID is required.");
-      return await requester.request("/assistant/messages", { text, requestId });
+      if (!requestId.trim())
+        throw new Error("An assistant request ID is required.");
+      return await requester.request("/assistant/messages", {
+        text,
+        requestId,
+      });
     },
     confirmAction(actionId: string): Promise<unknown> {
       return requester.request(
@@ -71,6 +72,9 @@ export function createAssistantClient(requester: AssistantRequest) {
         undefined,
         "POST",
       );
+    },
+    resetConversation(): Promise<unknown> {
+      return requester.request("/assistant/reset", {}, "POST");
     },
   };
 }

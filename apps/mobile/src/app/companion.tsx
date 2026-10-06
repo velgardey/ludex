@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -29,7 +30,7 @@ const prompts = [
 ];
 
 export default function Companion() {
-  const { client, ready, session, reducedMotion, refresh } = useLudex();
+  const { client, ready, session, reducedMotion, refresh, settings, saveSettings } = useLudex();
   return (
     <Conversation
       key={session?.user.id ?? "guest"}
@@ -38,6 +39,8 @@ export default function Companion() {
       session={session}
       reducedMotion={reducedMotion}
       refresh={refresh}
+      settings={settings}
+      saveSettings={saveSettings}
     />
   );
 }
@@ -48,12 +51,16 @@ function Conversation({
   session,
   reducedMotion,
   refresh,
+  settings,
+  saveSettings,
 }: {
   client: AssistantRequest;
   ready: boolean;
   session: Session | null;
   reducedMotion: boolean;
   refresh: (replace?: boolean) => Promise<void>;
+  settings: Record<string, unknown>;
+  saveSettings: ReturnType<typeof useLudex>["saveSettings"];
 }) {
   const assistant = useMemo(() => createAssistantClient(client), [client]);
   const [state, setState] = useState<AssistantState | null>(null);
@@ -64,6 +71,7 @@ function Conversation({
   const [error, setError] = useState("");
   const [authExpired, setAuthExpired] = useState(false);
   const [notice, setNotice] = useState("");
+  const [savingConsent, setSavingConsent] = useState(false);
   const requestVersion = useRef(0);
   const conversation = useRef<ScrollView>(null);
 
@@ -100,10 +108,8 @@ function Conversation({
 
   const messages = Array.isArray(state?.messages) ? state.messages : [];
   const remaining = state?.allowance?.remaining;
-  const exhausted =
-    state?.status === "allowance-exhausted" ||
-    state?.status === "disabled" ||
-    (typeof remaining === "number" && remaining <= 0);
+  const unavailable = state?.status === "disabled";
+  const cloudConsent = state?.cloudConsent === true;
 
   const scrollToLatest = () => {
     conversation.current?.scrollToEnd({ animated: !reducedMotion });
@@ -111,7 +117,7 @@ function Conversation({
 
   async function send() {
     const text = draft.trim();
-    if (!session || !state || !text || sending || exhausted) return;
+    if (!session || !state || !text || sending || unavailable) return;
     setError("");
     setAuthExpired(false);
     setNotice("");
@@ -119,7 +125,7 @@ function Conversation({
     try {
       const response = await assistant.sendMessage(text, Crypto.randomUUID());
       const status = recordValue(response)?.status;
-      if (status === "rejected" || status === "conflict" || status === "allowance-exhausted") {
+      if (status === "rejected" || status === "conflict") {
         await refreshState();
         setError(responseMessage(response, "Your assistant allowance is used for now. Your journal has not changed."));
         setAuthExpired(false);
@@ -134,6 +140,50 @@ function Conversation({
     } finally {
       setSending(false);
     }
+  }
+
+  async function toggleCloudConsent() {
+    if (!state || savingConsent) return;
+    setSavingConsent(true);
+    setError("");
+    try {
+      const preferences = recordValue(settings.notificationPreferences) ?? {};
+      await saveSettings({
+        ...settings,
+        notificationPreferences: { ...preferences, aiCloudConsent: !cloudConsent },
+      });
+      await refreshState();
+    } catch (cause) {
+      setError(errorText(cause, "Your cloud context preference could not be saved."));
+    } finally {
+      setSavingConsent(false);
+    }
+  }
+
+  function confirmReset() {
+    Alert.alert(
+      "Clear your conversation?",
+      "This clears your saved conversation and search memory. Your usage allowance remains unchanged.",
+      [
+        { text: "Keep conversation", style: "cancel" },
+        {
+          text: "Clear conversation",
+          style: "destructive",
+          onPress: () => {
+            void (async () => {
+              setError("");
+              try {
+                await assistant.resetConversation();
+                await refreshState();
+                setNotice("Conversation and search memory cleared.");
+              } catch (cause) {
+                setError(errorText(cause, "Your conversation could not be cleared."));
+              }
+            })();
+          },
+        },
+      ],
+    );
   }
 
   async function decide(action: AssistantAction, decision: "confirm" | "reject") {
@@ -207,18 +257,33 @@ function Conversation({
                     ? "AI generation is off · catalog fallback available"
                     : state?.status === "disabled"
                       ? "The companion is temporarily unavailable"
-                      : exhausted
-                        ? "Your assistant allowance is used for now"
+                : state?.status === "allowance-exhausted"
+                  ? "Cloud allowance reached · catalog fallback is available"
                         : "Your conversation is saved to your Ludex account"}
           </Text>
           {session && state ? (
             <Text style={local.allowance}>
               {typeof remaining === "number"
-                ? `${Math.max(0, remaining)}${typeof state.allowance?.limit === "number" ? ` of ${state.allowance.limit}` : ""} left`
+                ? `$${Math.max(0, remaining).toFixed(3)}${typeof state.allowance?.limit === "number" ? ` of $${state.allowance.limit.toFixed(3)}` : ""} today`
                 : "Usage details unavailable"}
             </Text>
           ) : null}
         </View>
+
+        {session && state ? (
+          <View style={local.notice}>
+            <Text style={local.noticeTitle}>Your context, your choice</Text>
+            <Text style={local.noticeText}>
+              Cloud replies send only your prompt and relevant journal context to Azure AI. This is off until you enable it. Catalog fallback stays available without cloud context.
+            </Text>
+            <View style={local.privacyActions}>
+              <Button mode="outlined" compact disabled={sending || loading || savingConsent} onPress={() => void toggleCloudConsent()}>
+                {savingConsent ? "Saving…" : cloudConsent ? "Turn off cloud context" : "Enable cloud context"}
+              </Button>
+              <Button compact disabled={sending || loading || savingConsent} onPress={confirmReset}>Clear conversation & search memory</Button>
+            </View>
+          </View>
+        ) : null}
 
         {state?.status === "unconfigured" ? (
           <View style={local.notice} accessibilityLiveRegion="polite">
@@ -228,11 +293,11 @@ function Conversation({
             </Text>
           </View>
         ) : null}
-        {state && exhausted && state.status !== "disabled" ? (
+        {state && state.status === "allowance-exhausted" ? (
           <View style={[local.notice, local.warning]} accessibilityLiveRegion="polite">
             <Text style={local.noticeTitle}>Allowance reached</Text>
             <Text style={local.noticeText}>
-              Your saved conversation is still here. Sending new requests is paused until the allowance refreshes. Pending actions still require your review.
+              Cloud generation has reached its daily allowance. You can keep asking for deterministic catalog fallback replies; journal actions still wait for your review.
             </Text>
           </View>
         ) : null}
@@ -312,11 +377,11 @@ function Conversation({
             mode="outlined"
             value={draft}
             onChangeText={setDraft}
-            placeholder={exhausted ? "Your allowance is paused" : "Ask about what to watch or play…"}
+            placeholder={unavailable ? "The companion is unavailable" : "Ask about what to watch or play…"}
             accessibilityLabel="Ask your Ludex companion"
             multiline
             maxLength={1000}
-            disabled={!state || loading || sending || exhausted}
+            disabled={!state || loading || sending || unavailable}
             dense
             outlineColor={colors.outline}
             activeOutlineColor={colors.coral}
@@ -328,7 +393,7 @@ function Conversation({
           <Button
             mode="contained"
             onPress={() => void send()}
-            disabled={!draft.trim() || !state || loading || sending || exhausted}
+            disabled={!draft.trim() || !state || loading || sending || unavailable}
             style={local.send}
             contentStyle={local.sendContent}
             accessibilityLabel={sending ? "Sending message" : "Send message"}
@@ -497,6 +562,7 @@ const local = StyleSheet.create({
   warning: { borderColor: "#775253", backgroundColor: "#302027" },
   noticeTitle: { ...font.semibold, color: colors.lime, fontSize: 10, letterSpacing: 1, marginBottom: 4 },
   noticeText: { ...type.body, color: colors.pearl, fontSize: 11, lineHeight: 18 },
+  privacyActions: { flexDirection: "row" as const, flexWrap: "wrap" as const, alignItems: "center" as const, gap: 5, marginTop: 8 },
   centerNote: { ...type.metadata, alignSelf: "center", color: colors.muted, fontSize: 11, textAlign: "center", marginVertical: 12 },
   empty: {
     flex: 1,

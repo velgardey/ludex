@@ -44,6 +44,8 @@ function Routes() {
           options={{ title: "Edit showcase" }}
         />
         <Stack.Screen name="settings" options={{ title: "Settings" }} />
+        <Stack.Screen name="connections" options={{ title: "Connections & imports" }} />
+        <Stack.Screen name="plans" options={{ title: "Shared plans" }} />
         <Stack.Screen name="moderation" options={{ title: "Moderation" }} />
         <Stack.Screen name="auth" options={{ title: "Your Ludex journal" }} />
         <Stack.Screen

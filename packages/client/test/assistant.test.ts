@@ -64,6 +64,19 @@ test("action confirmation and rejection use explicit POST routes with encoded ID
   ]);
 });
 
+test("conversation reset is an explicit POST request", async () => {
+  const calls: unknown[][] = [];
+  const client = createAssistantClient({
+    request: async (...args: unknown[]) => {
+      calls.push(args);
+      return { status: "reset" };
+    },
+  });
+
+  assert.deepEqual(await client.resetConversation(), { status: "reset" });
+  assert.deepEqual(calls, [["/assistant/reset", {}, "POST"]]);
+});
+
 test("assistant request failures propagate without manufacturing replies", async () => {
   const unavailable = new Error("AI allowance exhausted");
   const client = createAssistantClient({
