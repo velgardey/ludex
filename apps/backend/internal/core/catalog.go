@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -21,7 +22,7 @@ func (a *App) SearchCatalog(ctx context.Context, text, media, region string) ([]
 			return nil, err
 		}
 		for _, item := range items {
-			if err := a.cacheTitle(ctx, item); err != nil {
+			if err := a.cacheSearchTitle(ctx, item); err != nil {
 				return nil, err
 			}
 		}
@@ -65,7 +66,17 @@ func (a *App) getTitle(ctx context.Context, id string) (CatalogHit, error) {
 	if a.cfg.CatalogGet != nil {
 		item, err := a.cfg.CatalogGet(ctx, id)
 		if err != nil {
-			return CatalogHit{}, err
+			if a.db == nil {
+				return CatalogHit{}, err
+			}
+			cached, cacheErr := a.loadCachedTitle(ctx, id)
+			if cacheErr == nil {
+				return cached, nil
+			}
+			if errors.Is(cacheErr, pgx.ErrNoRows) {
+				return CatalogHit{}, err
+			}
+			return CatalogHit{}, fmt.Errorf("catalog provider failed and cached title fallback failed: %w", cacheErr)
 		}
 		if item.ID != id {
 			return CatalogHit{}, badRequest("catalog-id-mismatch")
@@ -78,12 +89,20 @@ func (a *App) getTitle(ctx context.Context, id string) (CatalogHit, error) {
 	if a.db == nil {
 		return CatalogHit{}, problem(503, "catalog-unavailable")
 	}
+	item, err := a.loadCachedTitle(ctx, id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return CatalogHit{}, notFound("title-not-found")
+	}
+	if err != nil {
+		return CatalogHit{}, err
+	}
+	return item, nil
+}
+
+func (a *App) loadCachedTitle(ctx context.Context, id string) (CatalogHit, error) {
 	var media, title string
 	var providerIDs, episodes, raw []byte
 	err := a.db.QueryRow(ctx, `SELECT media,title,provider_ids,episodes,body FROM titles WHERE id=$1`, id).Scan(&media, &title, &providerIDs, &episodes, &raw)
-	if err == pgx.ErrNoRows {
-		return CatalogHit{}, notFound("title-not-found")
-	}
 	if err != nil {
 		return CatalogHit{}, fmt.Errorf("load title: %w", err)
 	}
@@ -126,6 +145,23 @@ func decodeCatalogHit(id, media, title string, providerIDs, episodes, raw []byte
 }
 
 func (a *App) cacheTitle(ctx context.Context, item CatalogHit) error {
+	return a.writeCatalogTitle(ctx, item, false)
+}
+
+func (a *App) cacheSearchTitle(ctx context.Context, item CatalogHit) error {
+	if item.ID == "" || item.Title == "" || (item.Media != "movie" && item.Media != "show" && item.Media != "game") {
+		return badRequest("invalid-catalog-item")
+	}
+	if a.db == nil {
+		return problem(503, "database-unavailable")
+	}
+	// Search hits omit show detail. Insert a first summary, but never update a
+	// cached show; GetTitle remains the only path that refreshes show details.
+	preserveExisting := item.Media == "show" && len(item.Episodes) == 0
+	return a.writeCatalogTitle(ctx, item, preserveExisting)
+}
+
+func (a *App) writeCatalogTitle(ctx context.Context, item CatalogHit, preserveExisting bool) error {
 	if a.db == nil {
 		return problem(503, "database-unavailable")
 	}
@@ -150,12 +186,18 @@ func (a *App) cacheTitle(ctx context.Context, item CatalogHit) error {
 	if err != nil {
 		return fmt.Errorf("encode episodes: %w", err)
 	}
-	_, err = a.db.Exec(ctx, `
+	query := `
 		INSERT INTO titles(id,media,title,provider_ids,episodes,body,updated_at)
 		VALUES($1,$2,$3,$4::jsonb,$5::jsonb,$6::jsonb,now())
 		ON CONFLICT(id) DO UPDATE SET media=EXCLUDED.media,title=EXCLUDED.title,
-		provider_ids=EXCLUDED.provider_ids,episodes=EXCLUDED.episodes,body=EXCLUDED.body,updated_at=now()`,
-		item.ID, item.Media, item.Title, jsonText(providerIDs), jsonText(episodes), jsonText(body))
+		provider_ids=EXCLUDED.provider_ids,episodes=EXCLUDED.episodes,body=EXCLUDED.body,updated_at=now()`
+	if preserveExisting {
+		query = `
+			INSERT INTO titles(id,media,title,provider_ids,episodes,body,updated_at)
+			VALUES($1,$2,$3,$4::jsonb,$5::jsonb,$6::jsonb,now())
+			ON CONFLICT(id) DO NOTHING`
+	}
+	_, err = a.db.Exec(ctx, query, item.ID, item.Media, item.Title, jsonText(providerIDs), jsonText(episodes), jsonText(body))
 	if err != nil {
 		return fmt.Errorf("cache catalog title: %w", err)
 	}

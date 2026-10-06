@@ -167,6 +167,141 @@ func TestCatalogSearchIsPublicAndCachesJSONBInExecMode(t *testing.T) {
 	}
 }
 
+func TestGetTitleFallsBackToCachedCatalogWhenProviderFails(t *testing.T) {
+	pool := testDatabase(t)
+	want := CatalogHit{
+		ID:          "tmdb:show:42",
+		Media:       "show",
+		Title:       "Cached Show",
+		ProviderIDs: map[string]string{"tmdb": "42"},
+		Episodes:    []Episode{{ID: "tmdb:episode:7", Order: 1}},
+	}
+	seed := New(pool, Config{})
+	if err := seed.cacheTitle(t.Context(), want); err != nil {
+		t.Fatalf("seed cached title: %v", err)
+	}
+	app := New(pool, Config{CatalogGet: func(context.Context, string) (CatalogHit, error) {
+		return CatalogHit{}, fmt.Errorf("provider unavailable")
+	}})
+
+	got, err := app.GetTitle(t.Context(), want.ID)
+	if err != nil {
+		t.Fatalf("GetTitle should use the valid cached catalog title when the provider is unavailable: %v", err)
+	}
+	if got.ID != want.ID || got.Title != want.Title || len(got.Episodes) != 1 || got.Episodes[0].ID != want.Episodes[0].ID {
+		t.Fatalf("cached title = %#v, want %#v", got, want)
+	}
+
+	if _, err := app.GetTitle(t.Context(), "tmdb:show:404"); err == nil {
+		t.Fatal("GetTitle succeeded for a provider failure with no cached title")
+	}
+}
+
+func TestCatalogSearchSummaryPreservesDetailedShowForProviderFallback(t *testing.T) {
+	pool := testDatabase(t)
+	detailed := CatalogHit{
+		ID:       "tmdb:show:42",
+		Media:    "show",
+		Title:    "Cached Show",
+		Ended:    true,
+		Synopsis: "Full provider synopsis.",
+		Genres:   []string{"Drama"},
+		Episodes: []Episode{{ID: "tmdb:episode:7", Order: 1, Title: "Pilot"}},
+	}
+	summary := CatalogHit{
+		ID:       detailed.ID,
+		Media:    "show",
+		Title:    detailed.Title,
+		Synopsis: "Short search synopsis.",
+	}
+	providerAvailable := true
+	providerTitle := detailed
+	app := New(pool, Config{
+		CatalogGet: func(context.Context, string) (CatalogHit, error) {
+			if !providerAvailable {
+				return CatalogHit{}, fmt.Errorf("provider unavailable")
+			}
+			return providerTitle, nil
+		},
+		CatalogSearch: func(context.Context, string, string, string) ([]CatalogHit, error) {
+			return []CatalogHit{summary}, nil
+		},
+	})
+
+	if _, err := app.GetTitle(t.Context(), detailed.ID); err != nil {
+		t.Fatalf("initial detailed lookup failed: %v", err)
+	}
+	if _, err := app.SearchCatalog(t.Context(), "Cached Show", "show", ""); err != nil {
+		t.Fatalf("summary search failed: %v", err)
+	}
+	providerAvailable = false
+	got, err := app.GetTitle(t.Context(), detailed.ID)
+	if err != nil {
+		t.Fatalf("cached detailed lookup failed after provider failure: %v", err)
+	}
+	if !got.Ended || got.Synopsis != detailed.Synopsis || len(got.Genres) != 1 || got.Genres[0] != "Drama" || len(got.Episodes) != 1 || got.Episodes[0].ID != "tmdb:episode:7" {
+		t.Fatalf("summary search erased cached show details: %#v", got)
+	}
+
+	fresh := CatalogHit{
+		ID:       detailed.ID,
+		Media:    "show",
+		Title:    "Cached Show",
+		Synopsis: "Fresh provider synopsis.",
+		Episodes: []Episode{{ID: "tmdb:episode:8", Order: 1, Title: "New Pilot"}},
+	}
+	providerAvailable = true
+	providerTitle = fresh
+	if _, err := app.GetTitle(t.Context(), fresh.ID); err != nil {
+		t.Fatalf("fresh detailed lookup failed: %v", err)
+	}
+	providerAvailable = false
+	got, err = app.GetTitle(t.Context(), fresh.ID)
+	if err != nil {
+		t.Fatalf("fresh cached detailed lookup failed after provider failure: %v", err)
+	}
+	if got.Synopsis != fresh.Synopsis || len(got.Episodes) != 1 || got.Episodes[0].ID != "tmdb:episode:8" {
+		t.Fatalf("fresh provider details were not used: %#v", got)
+	}
+}
+
+func TestCatalogSearchSummaryCannotRaceWithDetailedShowCache(t *testing.T) {
+	pool := testDatabase(t)
+	app := New(pool, Config{})
+	detailed := CatalogHit{
+		ID:       "tmdb:show:race",
+		Media:    "show",
+		Title:    "Detailed Show",
+		Ended:    true,
+		Episodes: []Episode{{ID: "tmdb:episode:race", Order: 1}},
+	}
+	summary := CatalogHit{ID: detailed.ID, Media: "show", Title: "Summary Show"}
+	start := make(chan struct{})
+	errs := make(chan error, 2)
+	go func() {
+		<-start
+		errs <- app.cacheSearchTitle(t.Context(), summary)
+	}()
+	go func() {
+		<-start
+		errs <- app.cacheTitle(t.Context(), detailed)
+	}()
+	close(start)
+	for range 2 {
+		if err := <-errs; err != nil {
+			t.Fatalf("concurrent catalog cache write failed: %v", err)
+		}
+	}
+
+	got, err := app.GetTitle(t.Context(), detailed.ID)
+	if err != nil {
+		t.Fatalf("load concurrently cached show: %v", err)
+	}
+	if got.Title != detailed.Title || !got.Ended || len(got.Episodes) != 1 || got.Episodes[0].ID != detailed.Episodes[0].ID {
+		t.Fatalf("summary write replaced concurrent detailed show: %#v", got)
+	}
+}
+
 func TestDiscoverUsersSearchWorksInPostgres(t *testing.T) {
 	pool := testDatabase(t)
 	app := New(pool, Config{Env: "development", InviteCode: "invite"})
