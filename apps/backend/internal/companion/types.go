@@ -30,6 +30,8 @@ type LibraryRecord struct {
 	Liked   *bool           `json:"liked,omitempty"`
 	Note    string          `json:"note,omitempty"`
 	Runs    json.RawMessage `json:"runs,omitempty"`
+
+	CatalogEpisodes []catalog.Episode `json:"-"`
 }
 
 type Limits struct {
@@ -54,6 +56,7 @@ type Config struct {
 	AzureDeployment     string
 	AzureAPIKey         string
 	AzureEnabled        bool
+	CloudConsent        func(context.Context, string) (bool, error)
 	EmbeddingDeployment string
 	HTTPClient          *http.Client
 	ResolveUser         ResolveUser
@@ -100,9 +103,10 @@ type Message struct {
 }
 
 type StateResponse struct {
-	Status    string     `json:"status"`
-	Allowance *Allowance `json:"allowance"`
-	Messages  []Message  `json:"messages"`
+	Status       string     `json:"status"`
+	CloudConsent bool       `json:"cloudConsent"`
+	Allowance    *Allowance `json:"allowance"`
+	Messages     []Message  `json:"messages"`
 }
 
 type SendResponse struct {

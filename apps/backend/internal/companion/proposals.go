@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"ludex/backend/internal/catalog"
 )
 
 type proposalDraft struct {
@@ -150,6 +151,10 @@ func validateProgressCommand(command progressCommand, records map[string]Library
 		if record.Media != "movie" || !validUUID(change.RunID) {
 			return errors.New("invalid movie progress action")
 		}
+	case "episode-watched":
+		if record.Media != "show" || !validUUID(change.RunID) || !knownCatalogEpisode(record.CatalogEpisodes, change.EpisodeID) {
+			return errors.New("invalid episode progress action")
+		}
 	case "game-session":
 		if record.Media != "game" || !validUUID(change.RunID) || change.Minutes != nil && (*change.Minutes < 0 || *change.Minutes > 1440) || len(change.PlayedOn) > 100 || len(change.Emulator) > 100 {
 			return errors.New("invalid game session action")
@@ -166,6 +171,18 @@ func validateProgressCommand(command progressCommand, records map[string]Library
 		return errors.New("unsupported progress action")
 	}
 	return nil
+}
+
+func knownCatalogEpisode(episodes []catalog.Episode, episodeID string) bool {
+	if episodeID == "" {
+		return false
+	}
+	for _, episode := range episodes {
+		if episode.ID == episodeID {
+			return true
+		}
+	}
+	return false
 }
 
 func validateDate(value dateValue) error {
