@@ -13,3 +13,7 @@ No AI or automatic connector performance claim appears in the Stage A screens. S
 Actual API36 x86_64 installed-APK captures: `phone-android.png`, `feed-android.png`, `profile-android.png` (1080×2400 phone emulator). The independent native reviewer returned **fix**: type, real artwork, sampled Plum Ink #15121C, native tabs and shelf composition matched the direction; compact feed likes/replies needed explicit 48dp targets. Documentation required updating to include these captures. The full pre-build five-block contract and QUALITY BAR card were not available to that reviewer; a retrospective direction record is now explicit in the journal, and those historical selection steps remain unverified. A final scoring pass follows the targeted touch fix. Static captures do not prove TalkBack, reduced-motion transitions or physical responsiveness.
 
 Final native scoring verdict: **ship**, all three original findings resolved, no regression observed in the replacement capture. This is the targeted fix scope and API36 emulator rendering only; absent historical selection evidence and physical-device gates remain explicitly open.
+
+## Superseding Premiere direction
+
+The user subsequently requested a bold, modern, highly animated redesign and Sunburst imagery. The historical muted-lounge verdict above applies to the earlier foundation only. Current implementation, captures and verification are in `premiere-redesign.md`; `DESIGN.md` and the surface brief now describe Midnight Premiere.

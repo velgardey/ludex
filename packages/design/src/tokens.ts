@@ -1,2 +1,2 @@
-export const colors = { ink: '#15121C', surface: '#211D28', raised: '#272334', pearl: '#E8E4DF', muted: '#B9B0C3', violet: '#B6A3CF', copper: '#C89571', line: '#3B3446' } as const;
+export const colors = { ink: '#160D20', surface: '#21142E', raised: '#30213F', pearl: '#F3E9FA', muted: '#BFAFCB', violet: '#FF735F', copper: '#D8FF76', line: '#493352' } as const;
 export const motion = { press: 120, sheet: 220, easeOut: [0.23, 1, 0.32, 1] } as const;

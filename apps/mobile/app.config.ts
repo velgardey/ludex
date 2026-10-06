@@ -6,13 +6,13 @@ const config: ExpoConfig = {
   version: "0.1.0",
   scheme: "ludex",
   userInterfaceStyle: "dark",
-  backgroundColor: "#15121C",
+  backgroundColor: "#160D20",
   android: {
     package: "com.ludex.app",
     predictiveBackGestureEnabled: true,
     adaptiveIcon: {
       foregroundImage: "./assets/images/android-icon-foreground.png",
-      backgroundColor: "#15121C",
+      backgroundColor: "#160D20",
     },
     intentFilters: [
       {
@@ -30,7 +30,7 @@ const config: ExpoConfig = {
     [
       "expo-splash-screen",
       {
-        backgroundColor: "#15121C",
+        backgroundColor: "#160D20",
         image: "./assets/images/android-icon-foreground.png",
         imageWidth: 96,
       },

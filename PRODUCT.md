@@ -9,6 +9,6 @@ A personal film, television and game library connecting capture, logging, social
 ## Constraints
 100 invited accounts/10–20 simultaneous users; free non-commercial beta; US$10/month service target with Azure subsidies allowed; one backend region. Public follows and separately accepted friends/circles. Every assistant write confirmed. Stage A supplies persistent manual/social/showcase behavior; providers and generative AI follow in B/C.
 ## Brand commitments
-Ludex; atmospheric cinema lounge, cinematic artwork, expressive readable editorial type, exceptionally polished feed/showcase. Preserve fast manual actions, reduced motion and accessibility.
+Ludex; midnight premiere: original surreal cinema artwork, electric coral and chartreuse, oversized editorial type, fanned posters, illuminated story frames and curated shelves. The latest user request explicitly replaces the prior muted lounge direction. Preserve fast manual actions, reduced motion and accessibility.
 ## Evidence
 Product decisions Q1–Q32, beta specification and Stage A implementation plan in docs/. No deployed product or verified billing yet.

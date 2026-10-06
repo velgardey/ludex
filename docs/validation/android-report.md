@@ -119,3 +119,7 @@ Evidence files under `.impeccable/review/`:
 | `offline-restart-android.png` | Same pending action after offline force-stop/reopen |
 | `synced-library-android.png` | Real account A movie after reconnect/drain |
 | `account-b-library-android.png` | Real account B empty, isolated Library |
+
+## Superseding Midnight Premiere build
+
+The redesigned artifacts replace the earlier hashes above. Current x86_64 SHA256 is `751e0535d7a302610ed00579570cbf1a70bfd447262302ea07b3718311e38876`; current ARM64 USB SHA256 is `01e5ff72426951cbf2ae76e3f72c526146d21c651e3f6279b3af95f43e0cef75`. The final builds include the Reanimated press-cancellation fix, original Sunburst art and new palette/components. Current motion tests raise the native suite to 27 tests / 8 suites. Full current evidence is in `premiere-redesign.md`; the development-signing and physical-device boundaries remain unchanged.

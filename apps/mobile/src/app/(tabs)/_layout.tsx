@@ -4,7 +4,7 @@ export default function Tabs() {
   return (
     <NativeTabs
       backgroundColor={colors.ink}
-      tintColor={colors.violet}
+      tintColor={colors.coral}
       indicatorColor={colors.surface}
       labelStyle={{
         fontFamily: "SourceSans3",

@@ -68,7 +68,12 @@ function MotionTheme({ children }: { children: React.ReactNode }) {
   const { reducedMotion } = useLudex();
   return (
     <PaperProvider
-      theme={{ ...theme, animation: { scale: reducedMotion ? 0 : 1 } }}
+      theme={{
+        ...theme,
+        animation: {
+          scale: reducedMotion ? 0 : 1,
+        },
+      }}
     >
       {children}
     </PaperProvider>

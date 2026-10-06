@@ -10,6 +10,7 @@ import {
   DotsThree,
 } from "@phosphor-icons/react";
 import type { Activity, CatalogHit, User } from "@ludex/client";
+import { useReveal } from "../hooks/useReveal";
 import { Avatar, Artwork, Empty } from "./Primitives";
 export function Feed({
   items,
@@ -30,6 +31,7 @@ export function Feed({
   onDiscuss: (a: Activity) => void;
   onMenu: (a: Activity) => void;
 }) {
+  const root = useReveal(items.map(item => item.id).join(","));
   if (!items.length)
     return (
       <Empty
@@ -38,7 +40,7 @@ export function Feed({
       />
     );
   return (
-    <div className="activity-list">
+    <div className="activity-list" ref={root}>
       {items.map((a, index) => {
         const spread = index === 0 && !a.detailHidden;
         return (

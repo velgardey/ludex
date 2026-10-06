@@ -3,6 +3,7 @@ import { View } from "react-native";
 import { router } from "expo-router";
 import { Searchbar, Text, Button, Avatar } from "react-native-paper";
 import type { User } from "@ludex/domain";
+import { colors } from "../../theme";
 import { useLudex } from "../../state";
 import {
   Page,
@@ -41,10 +42,12 @@ export default function Discover() {
           value={query}
           onChangeText={setQuery}
           placeholder="Titles and people"
-          style={{ marginBottom: 22 }}
+          style={discoverStyles.search}
+          inputStyle={{ fontFamily: "SourceSans3", minHeight: 42 }}
         />
         <MediaFilters value={media} onChange={setMedia} />
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 16 }}>
+        <Text style={styles.eyebrow}>THE CATALOG</Text>
+        <View style={discoverStyles.catalog}>
           {catalog
             .filter(
               (t) =>
@@ -55,20 +58,30 @@ export default function Discover() {
               <Cover key={t.id} title={t} width={140} />
             ))}
         </View>
-        <View style={{ marginTop: 30 }}>
+        <View style={discoverStyles.peopleSection}>
           <Text
             variant="headlineSmall"
-            style={{ fontFamily: "Fraunces", marginBottom: 16 }}
+            style={discoverStyles.peopleTitle}
           >
             People in the lounge
+          </Text>
+          <Text style={[styles.metadata, { marginBottom: 12 }]}>
+            Find a point of view worth following.
           </Text>
           {users
             .filter((u) => u.id !== session?.user.id)
             .map((u) => (
-              <View key={u.id} style={[styles.row, { paddingVertical: 12 }]}>
-                <Avatar.Text size={40} label={u.displayName.slice(0, 1)} />
+              <View key={u.id} style={[styles.row, discoverStyles.personRow]}>
+                <Avatar.Text
+                  size={44}
+                  label={u.displayName.slice(0, 1)}
+                  color={colors.ink}
+                  style={{ backgroundColor: colors.orchid }}
+                />
                 <Button
                   style={{ flex: 1 }}
+                  textColor={colors.pearl}
+                  contentStyle={{ justifyContent: "flex-start", minHeight: 48 }}
                   onPress={() =>
                     router.push({ pathname: "/profile", params: { id: u.id } })
                   }
@@ -76,7 +89,10 @@ export default function Discover() {
                   {u.displayName}
                 </Button>
                 <Button
-                  mode="outlined"
+                  mode="contained"
+                  buttonColor={colors.lime}
+                  textColor={colors.ink}
+                  style={{ borderRadius: 14 }}
                   onPress={async () => {
                     if (!session || preview) {
                       setNotice("Sign in to follow real people");
@@ -100,3 +116,28 @@ export default function Discover() {
     </View>
   );
 }
+
+const discoverStyles = {
+  search: {
+    marginBottom: 20,
+    borderRadius: 17,
+    backgroundColor: colors.surface,
+  },
+  catalog: {
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
+    gap: 14,
+    paddingBottom: 8,
+  },
+  peopleSection: { marginTop: 28, paddingTop: 22, borderTopWidth: 1, borderColor: colors.outline },
+  peopleTitle: { fontFamily: "Fraunces", fontWeight: "800" as const, marginBottom: 5, color: colors.pearl },
+  personRow: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.outline,
+    backgroundColor: colors.surface,
+  },
+};

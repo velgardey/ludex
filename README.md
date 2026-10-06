@@ -42,3 +42,5 @@ Browser tests expect the API and website running. Static-output verification ins
 Production website output is static (`out/`). `pnpm start` serves that output; a separately deployed API must be configured through `NEXT_PUBLIC_API_URL` at build time. No private data is embedded in the static build. See `docs/operations/runbook.md`, `PRODUCT.md`, and `DESIGN.md` for the scope and operating requirements.
 
 Internal Android preview APKs are available under `apps/mobile/artifacts/`: the x86_64 build is installed/tested in the emulator, and the ARM64 build supports a USB-connected phone through `adb reverse`. Both use a development certificate. See `apps/mobile/README.md` for the exact setup.
+
+The current visual world is **Midnight Premiere**: Sunburst-generated cinema architecture, coral/chartreuse controls, cinematic story frames, interactive poster fans, and finite preference-aware motion. See `DESIGN.md` and `docs/validation/premiere-redesign.md` for implementation and verification details.

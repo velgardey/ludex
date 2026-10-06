@@ -4,6 +4,7 @@ import { Button, Switch, Text } from "react-native-paper";
 import { View } from "react-native";
 import { useLudex } from "../../state";
 import { Page, Empty, styles } from "../../ui";
+import { colors } from "../../theme";
 import { ProfileView } from "../../features/profile/ProfileView";
 export default function Profile() {
   const { session, preview, showcase, catalog, refresh, client, setNotice } =
@@ -23,9 +24,18 @@ export default function Profile() {
     <Page title="Profile" refresh={() => refresh()}>
       {session || preview ? (
         <>
-          <View style={[styles.row, { marginBottom: 24 }]}>
-            <Text style={{ flex: 1 }}>Preview as a public viewer</Text>
-            <Switch value={viewer} onValueChange={setViewer} />
+          <View style={[styles.row, profileStyles.previewToggle]}>
+            <View style={{ flex: 1 }}>
+              <Text variant="titleSmall" style={{ fontWeight: "700" }}>
+                Preview as a public viewer
+              </Text>
+              <Text style={styles.metadata}>Check what others can see</Text>
+            </View>
+            <Switch
+              value={viewer}
+              onValueChange={setViewer}
+              color={colors.coral}
+            />
           </View>
           <ProfileView
             showcase={showcase}
@@ -40,6 +50,10 @@ export default function Profile() {
               <Button
                 key={c.id}
                 icon="playlist-play"
+                mode="outlined"
+                textColor={colors.pearl}
+                contentStyle={{ minHeight: 52 }}
+                style={profileStyles.collectionButton}
                 onPress={() =>
                   router.push({ pathname: "/collection", params: { id: c.id } })
                 }
@@ -50,14 +64,17 @@ export default function Profile() {
           <Button
             icon="playlist-plus"
             onPress={() => router.push("/collection-edit")}
-            style={{ marginTop: 20 }}
+            buttonColor={colors.lime}
+            textColor={colors.ink}
+            style={profileStyles.createButton}
           >
             Create mixed-media collection
           </Button>
           <Button
             icon="cog-outline"
             onPress={() => router.push("/settings")}
-            style={{ marginTop: 24 }}
+            textColor={colors.coral}
+            style={profileStyles.settingsButton}
           >
             Settings & data ownership
           </Button>
@@ -73,3 +90,22 @@ export default function Profile() {
     </Page>
   );
 }
+
+const profileStyles = {
+  previewToggle: {
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    marginBottom: 20,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: colors.outline,
+    backgroundColor: colors.surface,
+  },
+  collectionButton: {
+    marginBottom: 9,
+    borderRadius: 15,
+    borderColor: colors.outline,
+  },
+  createButton: { alignSelf: "flex-start" as const, marginTop: 12, borderRadius: 15 },
+  settingsButton: { alignSelf: "flex-start" as const, marginTop: 13 },
+};

@@ -3,7 +3,13 @@ import { ScrollView, View } from "react-native";
 import { router } from "expo-router";
 import { Button, Text } from "react-native-paper";
 import type { CatalogHit, Showcase } from "@ludex/domain";
-import { Cover, CinematicHeader, Landscape, styles } from "../../ui";
+import {
+  AudienceBadge,
+  Cover,
+  CinematicHeader,
+  Landscape,
+  styles,
+} from "../../ui";
 import { colors } from "../../theme";
 import { publicShelves } from "../feed/model";
 export function ProfileView({
@@ -25,42 +31,49 @@ export function ProfileView({
     : (showcase?.shelves ?? []);
   const accent =
     showcase?.theme === "matinee"
-      ? colors.copper
+      ? colors.lime
       : showcase?.theme === "midnight"
-        ? "#B1B7DC"
-        : colors.violet;
+        ? colors.orchid
+        : colors.coral;
   return (
     <>
       <CinematicHeader name={name} title={featured} accent={accent} />
       {viewer ? (
-        <Text style={[styles.metadata, { marginBottom: 16 }]}>
-          Public viewer preview · current visible shelves
-        </Text>
+        <View style={profileStyles.viewerNote}>
+          <Text style={styles.metadata}>
+            Public viewer preview · current visible shelves
+          </Text>
+        </View>
       ) : null}
       {owner ? (
         <Button
           mode="outlined"
           icon="pencil-outline"
           onPress={() => router.push("/showcase-edit")}
-          style={{ marginBottom: 20 }}
+          style={profileStyles.editButton}
+          textColor={colors.coral}
         >
           Edit your showcase
         </Button>
       ) : null}
       {shelves.map((s) => (
-        <View key={s.id} style={{ marginBottom: 30 }}>
-          <View style={[styles.row, { marginBottom: 14 }]}>
-            <Text
-              variant="titleLarge"
-              style={{ flex: 1, fontFamily: "Fraunces" }}
-            >
-              {s.title}
-            </Text>
-            <Text style={[styles.metadata, { color: accent }]}>
-              {s.audience.kind}
-            </Text>
+        <View key={s.id} style={profileStyles.shelf}>
+          <View style={[styles.row, profileStyles.shelfHeading]}>
+            <View style={{ flex: 1 }}>
+              <Text style={profileStyles.shelfEyebrow}>
+                {s.layout === "spread" ? "A JOURNEY THROUGH" : "IN THE ROTATION"}
+              </Text>
+              <Text variant="titleLarge" style={profileStyles.shelfTitle}>
+                {s.title}
+              </Text>
+            </View>
+            <AudienceBadge audience={s.audience.kind} />
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 2 }}
+          >
             {s.itemIds
               .map((id) => catalog.find((t) => t.id === id))
               .filter((t): t is CatalogHit => !!t)
@@ -81,6 +94,41 @@ export function ProfileView({
             : "Build a shelf of films, TV, games, or an ordered journey across them."}
         </Text>
       ) : null}
-    </>
+  </>
   );
 }
+
+const profileStyles = {
+  viewerNote: {
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    marginBottom: 16,
+    borderRadius: 15,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.outline,
+  },
+  editButton: {
+    alignSelf: "flex-start" as const,
+    marginBottom: 22,
+    borderRadius: 15,
+    borderColor: colors.coral,
+  },
+  shelf: {
+    marginBottom: 18,
+    padding: 15,
+    borderRadius: 23,
+    borderWidth: 1,
+    borderColor: colors.outline,
+    backgroundColor: colors.surface,
+  },
+  shelfHeading: { marginBottom: 14, alignItems: "flex-end" as const },
+  shelfEyebrow: {
+    color: colors.lime,
+    fontSize: 9,
+    fontWeight: "900" as const,
+    letterSpacing: 1.6,
+    marginBottom: 3,
+  },
+  shelfTitle: { flex: 1, fontFamily: "Fraunces", fontWeight: "800" as const, color: colors.pearl },
+};

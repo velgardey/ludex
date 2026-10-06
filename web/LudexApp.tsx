@@ -32,6 +32,7 @@ import {
 } from "./components/JournalTools";
 import { makeLog } from "./commands";
 import { Feed } from "./components/Feed";
+import { PremiereStage } from "./components/PremiereStage";
 import { Library } from "./components/Library";
 import { Profile } from "./components/Profile";
 import { AuthForm, LogForm, ShowcaseEditor } from "./components/Forms";
@@ -80,6 +81,8 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
       version: number;
     } | null>(null),
     [profileShowcase, setProfileShowcase] = useState<Showcase | null>(null);
+  const [settingsToken, setSettingsToken] = useState<string | null>(null);
+  const artEnabled = data.ready && (!session || (settingsToken === session.token && !Boolean(settings.lowData)));
   const scrollPositions = useRef<Record<string, number>>({});
   const replyPending = useRef(false);
   const [replyBusy, setReplyBusy] = useState(false);
@@ -96,6 +99,7 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
       .then((s) => {
         if (!active) return;
         setSettings(s);
+        setSettingsToken(session.token);
         document.documentElement.classList.toggle(
           "reduce-motion",
           Boolean(s.reducedMotion),
@@ -457,12 +461,7 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
             )}
             {page === "feed" && (
               <>
-                <div className="feed-heading">
-                  <h1>
-                    A life in stories<span>.</span>
-                  </h1>
-                  <p>What we watch. What we play. What stays with us.</p>
-                </div>
+                <PremiereStage mode="feed" artEnabled={artEnabled} catalog={catalog} onTitle={openTitle} onAction={() => requireAccount(() => setLogTitle(catalog[0]))} />
                 <div className="feed-filter">
                   <div>
                     <button
@@ -556,14 +555,7 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
             )}
             {page === "discover" && (
               <>
-                <div className="page-heading">
-                  <div>
-                    <h1>
-                      Follow your curiosity<span>.</span>
-                    </h1>
-                    <p>A familiar feeling. An unfamiliar world.</p>
-                  </div>
-                </div>
+                <PremiereStage mode="discover" artEnabled={artEnabled} catalog={catalog} onTitle={openTitle} onAction={() => document.querySelector<HTMLInputElement>('[aria-label="Search catalog"]')?.focus()} />
                 <label className="search-field">
                   <MagnifyingGlass size={21} />
                   <input
@@ -934,8 +926,8 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
               <div
                 className="lounge-invite"
                 style={{
-                  backgroundImage:
-                    "linear-gradient(180deg,transparent,#16131d),url(/art/lounge.webp)",
+                  backgroundImage: artEnabled ?
+                    "linear-gradient(180deg,transparent,#160d20),url(/art/premiere.webp)" : undefined,
                 }}
               >
                 <FilmSlate size={23} />

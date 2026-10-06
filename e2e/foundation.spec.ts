@@ -162,6 +162,7 @@ test("real journal collections, review drafts, public social flow and persistent
     await page
       .getByRole("button", { name: "Save showcase", exact: true })
       .click();
+    await expect(page.getByRole("dialog", { name: "Set the scene.", exact: true })).toHaveCount(0);
     await page.reload();
     await expect(
       page.getByRole("heading", { name: "The long way home", exact: true }),
