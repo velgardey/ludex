@@ -1,0 +1,119 @@
+openapi: 3.1.0
+info:
+  title: Ludex API
+  version: 0.1.0
+  description: Partial Go beta contract worksheet; not a complete generated client specification. Compatibility routes also accept /api/v1. See routes.md for runtime coverage.
+servers:
+  - url: http://localhost:4000/api
+security:
+  - ludexSession: []
+paths:
+  /assistant/state:
+    get:
+      operationId: assistantState
+      responses:
+        '200':
+          description: Persisted conversation and allowance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistantState'
+  /assistant/messages:
+    post:
+      operationId: sendAssistantMessage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text, requestId]
+              properties:
+                text: {type: string, minLength: 1, maxLength: 4000}
+                requestId: {type: string, minLength: 1, maxLength: 128}
+      responses:
+        '200': {description: Persisted model answer or explicitly labeled structured fallback}
+        '409': {description: Request ID payload conflict}
+        '429': {description: Rate or allowance limit}
+  /assistant/actions/{id}/confirm:
+    post:
+      operationId: confirmAssistantAction
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: string}
+      responses:
+        '200': {description: Confirmed action or replayed result}
+        '409': {description: Expired proposal or stale progress version}
+  /progress:
+    post:
+      operationId: applyProgress
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [commandId, titleId, baseVersion, change, occurredAt, audience, spoiler]
+              properties:
+                commandId: {type: string}
+                titleId: {type: string}
+                baseVersion: {type: integer, minimum: 0}
+                change: {type: object}
+                occurredAt: {type: object}
+                audience: {type: object}
+                spoiler: {type: object}
+      responses:
+        '200': {description: Persisted progress and command receipt}
+        '409': {description: Stale version}
+  /feed:
+    get:
+      operationId: readFeed
+      responses:
+        '200': {description: Cursor page filtered for actor visibility and spoiler progress}
+  /imports/preview:
+    post:
+      operationId: previewImport
+      responses:
+        '201': {description: Private persisted preview; no progress applied}
+  /plans:
+    get:
+      operationId: readPlans
+      responses:
+        '200': {description: Plans the actor belongs to, excluding blocked-member interactions}
+    post:
+      operationId: createPlan
+      responses:
+        '201': {description: Private plan and member invitations persisted}
+components:
+  securitySchemes:
+    ludexSession:
+      type: http
+      scheme: bearer
+  schemas:
+    AssistantState:
+      type: object
+      required: [status, messages]
+      properties:
+        status: {type: string}
+        cloudConsent: {type: boolean}
+        allowance:
+          type: [object, 'null']
+          properties:
+            remaining: {type: number}
+            limit: {type: number}
+            resetsAt: {type: string}
+        messages:
+          type: array
+          items:
+            type: object
+            required: [id, role, text, createdAt]
+            properties:
+              id: {type: string}
+              role: {type: string, enum: [user, assistant]}
+              text: {type: string}
+              createdAt: {type: string, format: date-time}
+              fallback: {type: boolean}
+              citations: {type: array, items: {type: object}}
+              actions: {type: array, items: {type: object}}

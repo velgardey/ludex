@@ -11,6 +11,7 @@ import {
   type ConnectionsOverview,
   type ConnectionsRequest,
   type ImportJob,
+  type ImportRow,
   type ImportPreview,
   type SteamPreviewObservation,
 } from "../../packages/client/src/connections.ts";
@@ -29,6 +30,10 @@ type ActiveJob = {
   value: ImportJob;
   owner: string;
 };
+
+type ImportFilter = "all" | "needs-review" | "matched" | "needs-episode" | "accepted" | "failed";
+const IMPORT_PAGE_SIZE = 100;
+type ConnectionsApi = ReturnType<typeof createConnectionsClient>;
 
 const MAX_CSV_BYTES = 5 * 1024 * 1024;
 
@@ -50,6 +55,8 @@ function ConnectionsContent({ client, signedIn, sessionKey, catalog = [], onSign
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [previewOwner, setPreviewOwner] = useState<string | null>(null);
   const [confirmRows, setConfirmRows] = useState(false);
+  const [importFilter, setImportFilter] = useState<ImportFilter>("all");
+  const [importPage, setImportPage] = useState(0);
   const [importError, setImportError] = useState("");
   const [importBusy, setImportBusy] = useState(false);
   const [activeJob, setActiveJob] = useState<ActiveJob | null>(null);
@@ -140,7 +147,14 @@ function ConnectionsContent({ client, signedIn, sessionKey, catalog = [], onSign
   const steamSupported = typeof steamCapability === "boolean" ? steamCapability : !!steamCapability?.supported;
   const currentSteamRows = steamLoadedId === steamId64.trim() ? steamRows : [];
   const matchedRows = currentPreview?.rows.filter(isMatched) ?? [];
-  const unmatchedRows = currentPreview?.rows.filter((row) => !isMatched(row)) ?? [];
+  const unmatchedRows = currentPreview?.rows.filter(needsReview) ?? [];
+  const filteredRows = (currentPreview?.rows ?? []).filter((row) => matchesImportFilter(row, importFilter));
+  const pageCount = Math.max(1, Math.ceil(filteredRows.length / IMPORT_PAGE_SIZE));
+  const currentPage = Math.min(importPage, pageCount - 1);
+  const visibleRows = filteredRows.slice(currentPage * IMPORT_PAGE_SIZE, (currentPage + 1) * IMPORT_PAGE_SIZE);
+  const firstVisible = filteredRows.length ? currentPage * IMPORT_PAGE_SIZE + 1 : 0;
+  const lastVisible = Math.min(filteredRows.length, (currentPage + 1) * IMPORT_PAGE_SIZE);
+  const remainingRows = Math.max(0, filteredRows.length - lastVisible);
 
   async function loadFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.currentTarget.files?.[0];
@@ -159,6 +173,8 @@ function ConnectionsContent({ client, signedIn, sessionKey, catalog = [], onSign
       setPreview(null);
       setPreviewOwner(null);
       setConfirmRows(false);
+      setImportPage(0);
+      setImportFilter("all");
     } catch {
       setImportError("The selected file could not be read. Try another CSV file.");
     }
@@ -171,6 +187,8 @@ function ConnectionsContent({ client, signedIn, sessionKey, catalog = [], onSign
     setImportError("");
     setPreview(null);
     setConfirmRows(false);
+    setImportPage(0);
+    setImportFilter("all");
     try {
       const result = await api.previewImport(source, csv);
       setPreview(result);
@@ -188,7 +206,28 @@ function ConnectionsContent({ client, signedIn, sessionKey, catalog = [], onSign
     setPreview(null);
     setPreviewOwner(null);
     setConfirmRows(false);
+    setImportPage(0);
+    setImportFilter("all");
     setImportError("");
+  }
+
+  async function matchImportRow(row: ImportRow, choice: { titleId: string; episodeId?: string }) {
+    if (!currentPreview || importBusy) return;
+    setImportBusy(true);
+    setImportError("");
+    try {
+      const result = await api.matchImportRow(currentPreview.id, row.id, choice);
+      setPreview((current) => current ? {
+        ...current,
+        rows: current.rows.map((item) => item.id === row.id ? { ...item, ...result } : item),
+      } : current);
+      setConfirmRows(false);
+    } catch (error) {
+      setImportError(messageFor(error, "This row could not be matched."));
+      throw new Error(messageFor(error, "This row could not be matched."));
+    } finally {
+      setImportBusy(false);
+    }
   }
 
   async function commitPreview() {
@@ -484,6 +523,8 @@ function ConnectionsContent({ client, signedIn, sessionKey, catalog = [], onSign
                         setPreview(null);
                         setPreviewOwner(null);
                         setConfirmRows(false);
+                        setImportPage(0);
+                        setImportFilter("all");
                       }}
                       rows={5}
                       maxLength={5 * 1024 * 1024}
@@ -510,7 +551,7 @@ function ConnectionsContent({ client, signedIn, sessionKey, catalog = [], onSign
                     <div className={styles.previewSummary}>
                       <div>
                         <p className={styles.eyebrow}>SERVER MATCH RESULTS</p>
-                        <h4>{matchedRows.length} matched · {unmatchedRows.length} need attention</h4>
+                        <h4>{matchedRows.length} ready · {unmatchedRows.length} need attention · {currentPreview.rows.length} total</h4>
                       </div>
                       <button
                         type="button"
@@ -527,19 +568,43 @@ function ConnectionsContent({ client, signedIn, sessionKey, catalog = [], onSign
                     {!currentPreview.rows.length ? (
                       <p className={styles.empty}>No importable rows were found in this file.</p>
                     ) : (
-                      <ul className={styles.previewRows}>
-                        {currentPreview.rows.map((row) => (
-                          <li key={row.id} className={styles.previewRow}>
-                            <div>
-                              <strong>{row.title}</strong>
-                              <span>{mediaName(row.media)}{row.year ? ` · ${row.year}` : ""}{row.date ? ` · ${row.date}` : ""}</span>
-                            </div>
-                            <span className={isMatched(row) ? styles.matched : styles.unmatched}>
-                              {isMatched(row) ? "Matched in Ludex" : "No safe match"}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
+                      <>
+                        <div className={styles.reviewToolbar}>
+                          <label className={styles.field}>
+                            <span>Show rows</span>
+                            <select value={importFilter} onChange={(event) => { setImportFilter(event.currentTarget.value as ImportFilter); setImportPage(0); }}>
+                              <option value="all">All rows ({currentPreview.rows.length})</option>
+                              <option value="needs-review">Needs review ({unmatchedRows.length})</option>
+                              <option value="matched">Ready to import ({matchedRows.length})</option>
+                              <option value="needs-episode">Episode needed ({currentPreview.rows.filter((row) => row.status === "needs-episode").length})</option>
+                              <option value="accepted">Already imported ({currentPreview.rows.filter((row) => row.status === "accepted").length})</option>
+                              <option value="failed">Failed or conflicted ({currentPreview.rows.filter((row) => row.status === "failed" || row.status === "conflict").length})</option>
+                            </select>
+                          </label>
+                          <span className={styles.fieldHint}>
+                            {filteredRows.length ? `Showing ${firstVisible}–${lastVisible} of ${filteredRows.length}${remainingRows ? ` · ${remainingRows} more on later pages` : ""}` : "No rows in this view."}
+                          </span>
+                        </div>
+                        <ul className={styles.importRows}>
+                          {visibleRows.map((row) => (
+                            <ImportRowReview
+                              key={row.id}
+                              row={row}
+                              catalog={catalog}
+                              api={api}
+                              busy={importBusy}
+                              onMatch={(choice) => matchImportRow(row, choice)}
+                            />
+                          ))}
+                        </ul>
+                        {pageCount > 1 ? (
+                          <nav className={styles.pagination} aria-label="Import row pages">
+                            <button className={styles.textButton} type="button" disabled={currentPage === 0} onClick={() => setImportPage(currentPage - 1)}>Previous 100</button>
+                            <span>Page {currentPage + 1} of {pageCount}</span>
+                            <button className={styles.textButton} type="button" disabled={currentPage + 1 >= pageCount} onClick={() => setImportPage(currentPage + 1)}>Next 100</button>
+                          </nav>
+                        ) : null}
+                      </>
                     )}
                     {matchedRows.length ? (
                       <>
@@ -656,6 +721,147 @@ function SourceCard({
       <p>{detail}</p>
       {disabled ? <span className={styles.disabledLabel}>Setup unavailable</span> : null}
     </div>
+  );
+}
+
+function ImportRowReview({
+  row,
+  catalog,
+  api,
+  busy,
+  onMatch,
+}: {
+  row: ImportRow;
+  catalog: CatalogHit[];
+  api: ConnectionsApi;
+  busy: boolean;
+  onMatch: (choice: { titleId: string; episodeId?: string }) => Promise<void>;
+}) {
+  const [query, setQuery] = useState(row.title);
+  const [searchActive, setSearchActive] = useState(false);
+  const [titleId, setTitleId] = useState(row.matchedTitleId ?? "");
+  const [episodeId, setEpisodeId] = useState(row.episodeId ?? "");
+  const [searchResults, setSearchResults] = useState<CatalogHit[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const canEdit = row.status === "needs-match" || row.status === "needs-episode" || row.status === "matched";
+  const episodeRequired = row.media === "show" && (
+    row.status === "needs-episode" || !!row.episodeTitle || row.state === "completed"
+  );
+
+  useEffect(() => {
+    if (!searchActive) return;
+    let active = true;
+    const timer = setTimeout(() => {
+      if (query.trim().length < 2) {
+        setSearchResults([]);
+        setSearchError("");
+        return;
+      }
+      setSearching(true);
+      setSearchError("");
+      void api.searchCatalog(query, row.media)
+        .then((results) => {
+          if (active) setSearchResults(results);
+        })
+        .catch((cause: unknown) => {
+          if (active) setSearchError(cause instanceof Error ? cause.message : "Catalog search is unavailable.");
+        })
+        .finally(() => { if (active) setSearching(false); });
+    }, 260);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [api, query, row.media, searchActive]);
+
+  const results = dedupeCatalog([
+    ...searchResults,
+    ...catalog.filter((item) => item.media === row.media && item.title.toLowerCase().includes(query.trim().toLowerCase())),
+  ]).slice(0, 8);
+  const selectedTitle = results.find((item) => item.id === titleId) ?? catalog.find((item) => item.id === titleId);
+  const episodes = selectedTitle?.episodes ?? [];
+
+  return (
+    <li className={styles.importReviewRow}>
+      <div className={styles.importRowHeading}>
+        <div>
+          <strong>{row.title}</strong>
+          <span>{mediaName(row.media)}{row.year ? ` · ${row.year}` : ""}{row.date ? ` · ${row.date}` : ""}{row.rating ? ` · ${row.rating}/10` : ""}</span>
+        </div>
+        <span className={isMatched(row) ? styles.matched : row.status === "needs-episode" ? styles.episodeNeeded : styles.unmatched}>
+          {isMatched(row) ? `Matched: ${selectedTitle?.title ?? row.matchedTitleId}` : row.status === "needs-episode" ? "Episode needed" : row.status}
+        </span>
+      </div>
+      {row.episodeTitle ? <p className={styles.fieldHint}>Episode from CSV: {row.episodeTitle}</p> : null}
+      {canEdit ? (
+        <div className={styles.rowMatchControls}>
+          <label className={styles.field}>
+            <span>Find a real Ludex catalog title</span>
+            <input
+              value={query}
+              onFocus={() => setSearchActive(true)}
+              onChange={(event) => { setSearchActive(true); setQuery(event.currentTarget.value); setTitleId(""); setEpisodeId(""); setSearchResults([]); }}
+              placeholder="Search title"
+            />
+          </label>
+          {searching ? <span className={styles.fieldHint} role="status">Searching catalog…</span> : null}
+          {searchError ? <span className={styles.inlineError} role="alert">{searchError}</span> : null}
+          {searchActive && query.trim().length >= 2 ? (
+            <div className={styles.titleChoices} role="listbox" aria-label={`Catalog matches for ${row.title}`}>
+              {results.length ? results.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  role="option"
+                  aria-selected={titleId === item.id}
+                  className={titleId === item.id ? styles.titleSelected : ""}
+                  onClick={() => { setTitleId(item.id); setEpisodeId(""); }}
+                >
+                  <span>{item.title}</span><small>{mediaName(item.media)} · {item.year ?? "Year unknown"}</small>
+                </button>
+              )) : !searching ? <p>No Ludex catalog matches. Try another title.</p> : null}
+            </div>
+          ) : <p className={styles.fieldHint}>Focus this field to search the real Ludex catalog. At least two characters are required.</p>}
+          {row.media === "show" && titleId ? (
+            <label className={styles.field}>
+              <span>{episodeRequired ? "Choose the episode to import" : "Episode ID · optional for a library-only row"}</span>
+              {episodes.length ? (
+                <select value={episodeId} onChange={(event) => setEpisodeId(event.currentTarget.value)}>
+                  <option value="">{episodeRequired ? "Choose a catalog episode" : "No episode event"}</option>
+                  {episodes.map((episode) => <option key={episode.id} value={episode.id}>{episode.title || `Episode ${episode.order}`}</option>)}
+                </select>
+              ) : (
+                <input value={episodeId} onChange={(event) => setEpisodeId(event.currentTarget.value)} placeholder="Enter the exact Ludex episode ID" />
+              )}
+            </label>
+          ) : null}
+          {saveError ? <p className={styles.inlineError} role="alert">{saveError}</p> : null}
+          <button
+            className={styles.secondary}
+            type="button"
+            disabled={!titleId || (episodeRequired && !episodeId.trim()) || saving || busy}
+            onClick={async () => {
+              setSaving(true);
+              setSaveError("");
+              try {
+                await onMatch({ titleId, ...(episodeId.trim() ? { episodeId: episodeId.trim() } : {}) });
+              } catch (cause) {
+                setSaveError(cause instanceof Error ? cause.message : "This row could not be matched.");
+              } finally {
+                setSaving(false);
+              }
+            }}
+          >
+            {saving ? "Saving match…" : row.status === "matched" ? "Update match" : "Save row match"}
+          </button>
+        </div>
+      ) : (
+        <p className={styles.fieldHint}>{row.outcome ?? row.status}</p>
+      )}
+    </li>
   );
 }
 
@@ -807,6 +1013,25 @@ function messageFor(error: unknown, fallback: string) {
 
 function isMatched(row: ImportPreview["rows"][number]) {
   return row.status === "matched" && typeof row.matchedTitleId === "string" && row.matchedTitleId.length > 0;
+}
+
+function needsReview(row: ImportRow) {
+  return row.status === "needs-match" || row.status === "needs-episode";
+}
+
+function matchesImportFilter(row: ImportRow, filter: ImportFilter) {
+  if (filter === "all") return true;
+  if (filter === "needs-review") return needsReview(row);
+  if (filter === "matched") return isMatched(row);
+  if (filter === "needs-episode") return row.status === "needs-episode";
+  if (filter === "accepted") return row.status === "accepted";
+  return row.status === "failed" || row.status === "conflict";
+}
+
+function dedupeCatalog(items: CatalogHit[]) {
+  const byId = new Map<string, CatalogHit>();
+  for (const item of items) byId.set(item.id, item);
+  return [...byId.values()];
 }
 
 function safeTitle(payload: Record<string, unknown> | undefined) {

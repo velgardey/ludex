@@ -11,6 +11,7 @@ import {
   type User,
 } from "@ludex/client";
 import { refreshVisibleFeed } from "../feed";
+import { readJournalPanels } from "../refresh";
 export function useLudex() {
   const [session, setSession] = useState<Session | null>(null),
     [ready, setReady] = useState(false),
@@ -80,6 +81,32 @@ export function useLudex() {
           localStorage.removeItem("ludex-session");
         }
       }
+      const url = new URL(window.location.href);
+      if (url.searchParams.get("auth") === "complete") {
+        const cookieClient = new LudexClient({
+          baseUrl:
+            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api",
+        });
+        cookieClient
+          .me()
+          .then((user) => {
+            // HttpOnly cookie remains the credential; only public account state is kept here.
+            const s: Session = {
+              token: "",
+              expiresAt: new Date(Date.now() + 86400000).toISOString(),
+              user,
+            };
+            localStorage.setItem("ludex-session", JSON.stringify(s));
+            setSession(s);
+            url.searchParams.delete("auth");
+            window.history.replaceState(null, "", url.pathname + url.search);
+          })
+          .catch(() =>
+            setError(
+              "Google session could not be restored. Please sign in again.",
+            ),
+          );
+      }
       setReady(true);
     });
   }, []);
@@ -91,39 +118,72 @@ export function useLudex() {
       request === scope.current.request;
     try {
       if (session) {
-        const [c, f, l, p, s] = await Promise.all([
-          client.searchCatalog(),
-          client.readFeed({ limit: 20, filter: feedFilter }),
-          client.readLibrary(),
-          client.discoverUsers(),
-          client.readShowcase(session.user.id),
-        ]);
+        const panels = await readJournalPanels({
+          catalog: () => client.searchCatalog(),
+          feed: () => client.readFeed({ limit: 20, filter: feedFilter }),
+          library: () => client.readLibrary(),
+          people: () => client.discoverUsers(),
+          showcase: () => client.readShowcase(session.user.id),
+        });
         if (!current()) return;
-        const statuses = await Promise.all(
-          p
-            .filter((u) => !u.sample)
-            .map(async (u) => [u.id, await client.socialStatus(u.id)] as const),
+        if (panels.catalog || panels.library) {
+          const titles = panels.catalog ?? [];
+          const missing =
+            panels.library?.filter(
+              (entry) => !titles.some((t) => t.id === entry.titleId),
+            ) ?? [];
+          const resolved = await Promise.allSettled(
+            missing.map((entry) => client.getTitle(entry.titleId)),
+          );
+          if (!current()) return;
+          setCatalog([
+            ...titles,
+            ...resolved.flatMap((r) =>
+              r.status === "fulfilled" ? [r.value] : [],
+            ),
+          ]);
+        }
+        if (panels.feed) {
+          setFeed(panels.feed.items);
+          feedRef.current = panels.feed.items;
+          setNewFeed(null);
+        }
+        if (panels.library) setLibrary(panels.library);
+        if (panels.people) {
+          setPeople(panels.people);
+          const statuses = await Promise.allSettled(
+            panels.people
+              .filter((u) => !u.sample)
+              .map(
+                async (u) => [u.id, await client.socialStatus(u.id)] as const,
+              ),
+          );
+          if (!current()) return;
+          setSocial(
+            Object.fromEntries(
+              statuses.flatMap((s) =>
+                s.status === "fulfilled" ? [s.value] : [],
+              ),
+            ),
+          );
+        }
+        if (panels.showcase) setShowcase(panels.showcase);
+        setError(
+          panels.failures.length
+            ? `Could not refresh ${panels.failures.join(", ")}. Your other panels are up to date.`
+            : "",
         );
-        if (!current()) return;
-        setCatalog(c);
-        setFeed(f.items);
-        feedRef.current = f.items;
-        setNewFeed(null);
-        setLibrary(l);
-        setPeople(p);
-        setSocial(Object.fromEntries(statuses));
-        setShowcase(s);
-        setError("");
       } else {
-        const p = await client.preview();
+        // The real beta has no fictional public journal. Guests can browse the catalog.
+        const titles = await client.searchCatalog();
         if (!current()) return;
+        setPreview(null);
+        setCatalog(titles);
         setNewFeed(null);
         setSocial({});
-        setPreview(p);
-        setCatalog(p.catalog);
-        setFeed(p.feed.items);
-        setPeople(p.users);
-        setShowcase(p.showcase);
+        setFeed([]);
+        setPeople([]);
+        setShowcase(null);
         setLibrary([]);
         setError("");
       }

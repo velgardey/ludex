@@ -1,3 +1,5 @@
+import type { CatalogHit } from "../../domain/src/types.ts";
+
 export type ImportSource = "csv" | "letterboxd";
 
 export type ConnectionAccount = {
@@ -69,6 +71,9 @@ export type ImportRow = {
   note?: string;
   emulator?: string;
   playedOn?: string;
+  state?: string;
+  episodeId?: string;
+  episodeTitle?: string;
   matchedTitleId?: string;
   status: string;
   outcome?: string;
@@ -80,6 +85,18 @@ export type ImportPreview = {
   rows: ImportRow[];
   status: string;
   quietImport?: boolean;
+};
+
+export type ImportRowMatchInput = {
+  titleId: string;
+  episodeId?: string;
+};
+
+export type ImportRowMatchResult = {
+  id: string;
+  status: string;
+  matchedTitleId: string;
+  episodeId?: string;
 };
 
 export type ImportBatch = {
@@ -190,6 +207,32 @@ export function createConnectionsClient(requester: ConnectionsRequest) {
         return Promise.reject(new Error("Choose a supported import source."));
       if (!csv.trim()) return Promise.reject(new Error("Add CSV content before previewing."));
       return requester.request("/imports/preview", { source, csv }) as Promise<ImportPreview>;
+    },
+    searchCatalog(text: string, media?: string): Promise<CatalogHit[]> {
+      const query = text.trim();
+      if (!query) return Promise.reject(new Error("Enter a title to search the catalog."));
+      const params = new URLSearchParams({ text: query });
+      if (media) params.set("media", media);
+      return requester.request(`/catalog/search?${params}`) as Promise<CatalogHit[]>;
+    },
+    matchImportRow(
+      batchId: string,
+      rowId: string,
+      input: ImportRowMatchInput,
+    ): Promise<ImportRowMatchResult> {
+      const batch = batchId.trim();
+      const row = rowId.trim();
+      const titleId = input.titleId.trim();
+      const episodeId = input.episodeId?.trim();
+      if (!batch) return Promise.reject(new Error("An import batch is required."));
+      if (!row) return Promise.reject(new Error("An import row is required."));
+      if (!titleId) return Promise.reject(new Error("Choose a catalog title."));
+      if (input.episodeId !== undefined && !episodeId)
+        return Promise.reject(new Error("Choose an episode or clear the episode selection."));
+      return requester.request(
+        `/imports/${encodeURIComponent(batch)}/rows/${encodeURIComponent(row)}/match`,
+        { titleId, ...(episodeId ? { episodeId } : {}) },
+      ) as Promise<ImportRowMatchResult>;
     },
     readImports(): Promise<ImportBatch[]> {
       return requester.request("/imports") as Promise<ImportBatch[]>;

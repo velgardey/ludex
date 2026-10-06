@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { Button, Text, TextInput } from "react-native-paper";
 import { LudexError } from "@ludex/client";
@@ -9,6 +9,7 @@ import {
   type ConnectionsOverview,
   type ImportJob,
   type ImportPreview,
+  type ImportRow,
   type SteamPreviewObservation,
 } from "../../../../packages/client/src/connections.ts";
 import type { CatalogHit } from "@ludex/domain";
@@ -17,6 +18,8 @@ import { Heading, Page } from "../ui";
 import { colors, type } from "../theme";
 
 type ActiveJob = { pollUrl: string; value: ImportJob };
+type ImportFilter = "all" | "needs-review" | "matched" | "needs-episode" | "accepted" | "failed";
+const IMPORT_PAGE_SIZE = 100;
 
 export default function ConnectionsScreen() {
   const { client, ready, session, setNotice, catalog } = useLudex();
@@ -55,6 +58,8 @@ function ConnectionsContent({
   const [csv, setCsv] = useState("");
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [confirmed, setConfirmed] = useState(false);
+  const [importFilter, setImportFilter] = useState<ImportFilter>("all");
+  const [importPage, setImportPage] = useState(0);
   const [error, setError] = useState("");
   const [activeJob, setActiveJob] = useState<ActiveJob | null>(null);
   const [pollError, setPollError] = useState("");
@@ -124,7 +129,22 @@ function ConnectionsContent({
   }, [activeJob?.pollUrl, api, pollVersion, refresh, session]);
 
   const matched = preview?.rows.filter(isMatched) ?? [];
-  const unmatched = preview?.rows.filter((row) => !isMatched(row)) ?? [];
+  const unmatched = preview?.rows.filter(needsReview) ?? [];
+  const filteredRows = (preview?.rows ?? []).filter((row) => matchesImportFilter(row, importFilter));
+  const pageCount = Math.max(1, Math.ceil(filteredRows.length / IMPORT_PAGE_SIZE));
+  const currentPage = Math.min(importPage, pageCount - 1);
+  const visibleRows = filteredRows.slice(currentPage * IMPORT_PAGE_SIZE, (currentPage + 1) * IMPORT_PAGE_SIZE);
+  const firstVisible = filteredRows.length ? currentPage * IMPORT_PAGE_SIZE + 1 : 0;
+  const lastVisible = Math.min(filteredRows.length, (currentPage + 1) * IMPORT_PAGE_SIZE);
+  const remainingRows = Math.max(0, filteredRows.length - lastVisible);
+  const importFilters: { value: ImportFilter; label: string; count: number }[] = [
+    { value: "all", label: "All", count: preview?.rows.length ?? 0 },
+    { value: "needs-review", label: "Needs review", count: unmatched.length },
+    { value: "matched", label: "Ready", count: matched.length },
+    { value: "needs-episode", label: "Episode needed", count: preview?.rows.filter((row) => row.status === "needs-episode").length ?? 0 },
+    { value: "accepted", label: "Imported", count: preview?.rows.filter((row) => row.status === "accepted").length ?? 0 },
+    { value: "failed", label: "Failed", count: preview?.rows.filter((row) => row.status === "failed" || row.status === "conflict").length ?? 0 },
+  ];
   const steamCapability = overview?.capabilities.steam;
   const steamConfigured = typeof steamCapability === "boolean" ? steamCapability : !!steamCapability?.configured;
   const steamSupported = typeof steamCapability === "boolean" ? steamCapability : !!steamCapability?.supported;
@@ -170,10 +190,29 @@ function ConnectionsContent({
     setBusy(true);
     setPreview(null);
     setConfirmed(false);
+    setImportPage(0);
+    setImportFilter("all");
     try {
       setPreview(await api.previewImport(source, csv));
     } catch (cause) {
       setError(failureMessage(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function matchImportRow(rowId: string, choice: { titleId: string; episodeId?: string }) {
+    if (!session || !preview || busy) return;
+    setBusy(true);
+    try {
+      const result = await api.matchImportRow(preview.id, rowId, choice);
+      setPreview((current) => current ? {
+        ...current,
+        rows: current.rows.map((row) => row.id === rowId ? { ...row, ...result } : row),
+      } : current);
+      setConfirmed(false);
+    } catch (cause) {
+      throw new Error(failureMessage(cause));
     } finally {
       setBusy(false);
     }
@@ -313,7 +352,13 @@ function ConnectionsContent({
                       key={value}
                       accessibilityRole="radio"
                       accessibilityState={{ selected: source === value }}
-                      onPress={() => setSource(value)}
+                  onPress={() => {
+                    setSource(value);
+                    setPreview(null);
+                    setConfirmed(false);
+                    setImportFilter("all");
+                    setImportPage(0);
+                  }}
                       style={[local.sourceChoice, source === value ? local.sourceChoiceSelected : null]}
                     >
                       <Text style={[local.sourceChoiceText, source === value ? local.sourceChoiceTextSelected : null]}>
@@ -326,7 +371,7 @@ function ConnectionsContent({
                   mode="outlined"
                   label="Paste CSV text"
                   value={csv}
-                  onChangeText={(text) => { setCsv(text); setPreview(null); setConfirmed(false); }}
+                  onChangeText={(text) => { setCsv(text); setPreview(null); setConfirmed(false); setImportFilter("all"); setImportPage(0); }}
                   multiline
                   numberOfLines={5}
                   maxLength={5 * 1024 * 1024}
@@ -344,10 +389,44 @@ function ConnectionsContent({
                 </Button>
                 {preview ? (
                   <View style={local.preview}>
-                    <Text style={local.sectionTitle}>{matched.length} matched · {unmatched.length} need attention</Text>
-                    {preview.rows.length ? preview.rows.map((row) => (
-                      <PreviewRow key={row.id} row={row} />
-                    )) : <Text style={local.muted}>No importable rows were found in this file.</Text>}
+                    <Text style={local.sectionTitle}>{matched.length} ready · {unmatched.length} need attention · {preview.rows.length} total</Text>
+                    {preview.rows.length ? (
+                      <>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={local.filterChoices} accessibilityLabel="Filter import rows">
+                          {importFilters.map((filter) => (
+                            <Pressable
+                              key={filter.value}
+                              accessibilityRole="button"
+                              accessibilityState={{ selected: importFilter === filter.value }}
+                              onPress={() => { setImportFilter(filter.value); setImportPage(0); }}
+                              style={[local.filterChoice, importFilter === filter.value ? local.filterChoiceSelected : null]}
+                            >
+                              <Text style={[local.sourceChoiceText, importFilter === filter.value ? local.filterChoiceTextSelected : null]}>{filter.label} {filter.count}</Text>
+                            </Pressable>
+                          ))}
+                        </ScrollView>
+                        <Text style={local.rangeText}>
+                          {filteredRows.length ? `Showing ${firstVisible}–${lastVisible} of ${filteredRows.length}${remainingRows ? ` · ${remainingRows} more on later pages` : ""}` : "No rows in this view."}
+                        </Text>
+                        {visibleRows.map((row) => (
+                          <ImportRowReview
+                            key={row.id}
+                            row={row}
+                            catalog={catalog}
+                            api={api}
+                            busy={busy}
+                            onMatch={(choice) => matchImportRow(row.id, choice)}
+                          />
+                        ))}
+                        {pageCount > 1 ? (
+                          <View style={local.pagination}>
+                            <Button mode="outlined" compact disabled={currentPage === 0} onPress={() => setImportPage(currentPage - 1)}>Previous 100</Button>
+                            <Text style={local.muted}>Page {currentPage + 1} of {pageCount}</Text>
+                            <Button mode="outlined" compact disabled={currentPage + 1 >= pageCount} onPress={() => setImportPage(currentPage + 1)}>Next 100</Button>
+                          </View>
+                        ) : null}
+                      </>
+                    ) : <Text style={local.muted}>No importable rows were found in this file.</Text>}
                     {matched.length ? (
                       <>
                         <Pressable
@@ -528,15 +607,146 @@ function CatalogChoices({
   ) : <Text style={local.muted}>No matching Ludex catalog titles. Search another title.</Text>;
 }
 
-function PreviewRow({ row }: { row: ImportPreview["rows"][number] }) {
-  const matched = isMatched(row);
+function ImportRowReview({
+  row,
+  catalog,
+  api,
+  busy,
+  onMatch,
+}: {
+  row: ImportRow;
+  catalog: CatalogHit[];
+  api: ReturnType<typeof createConnectionsClient>;
+  busy: boolean;
+  onMatch: (choice: { titleId: string; episodeId?: string }) => Promise<void>;
+}) {
+  const [query, setQuery] = useState(row.title);
+  const [searchActive, setSearchActive] = useState(false);
+  const [titleId, setTitleId] = useState(row.matchedTitleId ?? "");
+  const [episodeId, setEpisodeId] = useState(row.episodeId ?? "");
+  const [searchResults, setSearchResults] = useState<CatalogHit[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const canEdit = row.status === "needs-match" || row.status === "needs-episode" || row.status === "matched";
+  const episodeRequired = row.media === "show" && (
+    row.status === "needs-episode" || !!row.episodeTitle || row.state === "completed"
+  );
+
+  useEffect(() => {
+    const searchText = query.trim();
+    if (!searchActive || searchText.length < 2) {
+      setSearchResults([]);
+      setSearchError("");
+      setSearching(false);
+      return;
+    }
+    let active = true;
+    setSearching(true);
+    setSearchError("");
+    const timer = setTimeout(() => {
+      void api.searchCatalog(searchText, row.media)
+        .then((results) => { if (active) setSearchResults(results); })
+        .catch((cause: unknown) => { if (active) setSearchError(failureMessage(cause)); })
+        .finally(() => { if (active) setSearching(false); });
+    }, 260);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [api, query, row.media, searchActive]);
+
+  const matches = dedupeCatalog([
+    ...searchResults,
+    ...catalog.filter((hit) => hit.media === row.media && hit.title.toLowerCase().includes(query.trim().toLowerCase())),
+  ]).slice(0, 8);
+  const selected = matches.find((hit) => hit.id === titleId) ?? catalog.find((hit) => hit.id === titleId) ?? searchResults.find((hit) => hit.id === titleId);
+  const episodes = selected?.episodes ?? [];
+
   return (
-    <View style={local.previewRow}>
-      <View style={{ flex: 1 }}>
-        <Text style={local.rowTitle}>{row.title}</Text>
-        <Text style={local.muted}>{mediaName(row.media)}{row.year ? ` · ${row.year}` : ""}{row.date ? ` · ${row.date}` : ""}</Text>
+    <View style={local.importRow}>
+      <View style={local.importRowHeader}>
+        <View style={{ flex: 1 }}>
+          <Text style={local.rowTitle}>{row.title}</Text>
+          <Text style={local.muted}>{mediaName(row.media)}{row.year ? ` · ${row.year}` : ""}{row.date ? ` · ${row.date}` : ""}{row.rating ? ` · ${row.rating}/10` : ""}</Text>
+        </View>
+        <Text style={isMatched(row) ? local.success : row.status === "needs-episode" ? local.episodeNeeded : local.warning}>
+          {isMatched(row) ? `Matched: ${selected?.title ?? row.matchedTitleId}` : row.status === "needs-episode" ? "Episode needed" : row.status}
+        </Text>
       </View>
-      <Text style={matched ? local.success : local.warning}>{matched ? "Matched in Ludex" : "No safe match"}</Text>
+      {row.episodeTitle ? <Text style={local.muted}>Episode from CSV: {row.episodeTitle}</Text> : null}
+      {canEdit ? (
+        <>
+          <TextInput
+            mode="outlined"
+            accessibilityLabel="Find a real Ludex catalog title"
+            label="Find a real Ludex catalog title"
+            value={query}
+            onFocus={() => setSearchActive(true)}
+            onChangeText={(value) => {
+              setSearchActive(true);
+              setQuery(value);
+              setTitleId("");
+              setEpisodeId("");
+              setSearchResults([]);
+            }}
+            outlineColor={colors.outline}
+            activeOutlineColor={colors.coral}
+            textColor={colors.pearl}
+            placeholderTextColor={colors.muted}
+            style={local.catalogInput}
+            contentStyle={local.inputContent}
+          />
+          {searching ? <Text accessibilityLiveRegion="polite" style={local.muted}>Searching catalog…</Text> : null}
+          {searchError ? <Text style={local.warning} accessibilityRole="alert">{searchError}</Text> : null}
+          {searchActive && query.trim().length >= 2 ? (
+            matches.length ? <CatalogChoices matches={matches} selectedId={titleId} onChoose={(hit) => { setTitleId(hit.id); setEpisodeId(""); }} /> : !searching ? <Text style={local.muted}>No matching Ludex titles. Search another title.</Text> : null
+          ) : <Text style={local.muted}>Focus this field to search the real Ludex catalog.</Text>}
+          {row.media === "show" && titleId ? (
+            <View style={local.episodeChoices}>
+              <Text style={local.muted}>{episodeRequired ? "Choose the episode to import" : "Choose an episode or keep this as a library row"}</Text>
+              {episodes.length ? episodes.slice(0, 8).map((episode) => (
+                <Pressable
+                  key={episode.id}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: episodeId === episode.id }}
+                  onPress={() => setEpisodeId(episode.id)}
+                  style={[local.catalogChoice, episodeId === episode.id ? local.catalogChoiceSelected : null]}
+                >
+                  <Text style={local.catalogChoiceTitle}>{episode.title || `Episode ${episode.order}`}</Text>
+                  <Text style={local.muted}>{episode.id}</Text>
+                </Pressable>
+              )) : <Text style={local.muted}>No episode list is available for this series. Enter the exact Ludex episode ID.</Text>}
+              <TextInput
+                mode="outlined"
+                accessibilityLabel="Exact Ludex episode ID"
+                label="Or enter the exact Ludex episode ID"
+                value={episodeId}
+                onChangeText={setEpisodeId}
+                outlineColor={colors.outline}
+                activeOutlineColor={colors.coral}
+                textColor={colors.pearl}
+                placeholderTextColor={colors.muted}
+                style={local.catalogInput}
+                contentStyle={local.inputContent}
+              />
+            </View>
+          ) : null}
+          {saveError ? <Text style={local.warning} accessibilityRole="alert">{saveError}</Text> : null}
+          <Button mode="outlined" disabled={!titleId || (episodeRequired && !episodeId.trim()) || busy || saving} onPress={async () => {
+            setSaving(true);
+            setSaveError("");
+            try {
+              await onMatch({ titleId, ...(episodeId.trim() ? { episodeId: episodeId.trim() } : {}) });
+            } catch (cause) {
+              setSaveError(cause instanceof Error ? cause.message : "This row could not be matched.");
+            } finally {
+              setSaving(false);
+            }
+          }}>{saving ? "Saving match…" : row.status === "matched" ? "Update match" : "Save row match"}</Button>
+        </>
+      ) : <Text style={local.muted}>{row.outcome ?? row.status}</Text>}
     </View>
   );
 }
@@ -560,6 +770,25 @@ function numberValue(value: unknown) {
 
 function isMatched(row: ImportPreview["rows"][number]) {
   return row.status === "matched" && typeof row.matchedTitleId === "string" && row.matchedTitleId.length > 0;
+}
+
+function needsReview(row: ImportRow) {
+  return row.status === "needs-match" || row.status === "needs-episode";
+}
+
+function matchesImportFilter(row: ImportRow, filter: ImportFilter) {
+  if (filter === "all") return true;
+  if (filter === "needs-review") return needsReview(row);
+  if (filter === "matched") return isMatched(row);
+  if (filter === "needs-episode") return row.status === "needs-episode";
+  if (filter === "accepted") return row.status === "accepted";
+  return row.status === "failed" || row.status === "conflict";
+}
+
+function dedupeCatalog(items: CatalogHit[]) {
+  const byId = new Map<string, CatalogHit>();
+  for (const item of items) byId.set(item.id, item);
+  return [...byId.values()];
 }
 
 function mediaName(value: string) {
@@ -619,7 +848,15 @@ const local = StyleSheet.create({
   csvInput: { minHeight: 125, backgroundColor: colors.raised },
   inputContent: { ...type.body, color: colors.pearl, fontSize: 11, lineHeight: 17 },
   preview: { gap: 8, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.outline, marginTop: 6 },
-  previewRow: { flexDirection: "row", alignItems: "center", gap: 8, padding: 9, borderWidth: 1, borderColor: colors.outline, borderRadius: 6, backgroundColor: colors.raised },
+  filterChoices: { flexDirection: "row", gap: 6, paddingVertical: 3 },
+  filterChoice: { minHeight: 34, justifyContent: "center", paddingHorizontal: 10, borderWidth: 1, borderColor: colors.outline, borderRadius: 18, backgroundColor: colors.raised },
+  filterChoiceSelected: { borderColor: colors.lime, backgroundColor: colors.lime },
+  filterChoiceTextSelected: { color: colors.ink },
+  rangeText: { ...type.metadata, color: colors.muted, fontSize: 9, marginBottom: 3 },
+  pagination: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 5, paddingTop: 5 },
+  importRow: { gap: 7, padding: 10, borderWidth: 1, borderColor: colors.outline, borderRadius: 7, backgroundColor: colors.raised },
+  importRowHeader: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 8 },
+  episodeNeeded: { ...type.metadata, color: "#F2D5A0", fontSize: 9 },
   rowTitle: { ...type.control, color: colors.pearl, fontSize: 10 },
   success: { ...type.metadata, color: colors.lime, fontSize: 9 },
   warning: { ...type.metadata, color: colors.error, fontSize: 9 },

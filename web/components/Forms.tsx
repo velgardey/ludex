@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -32,6 +32,18 @@ export function AuthForm({
 }) {
   const [mode, setMode] = useState<"signup" | "login">("signup"),
     [error, setError] = useState("");
+  const [authConfig, setAuthConfig] = useState<{
+    googleEnabled: boolean;
+    localEnabled: boolean;
+  } | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    const api = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
+    fetch(`${api}/auth/config`, { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setAuthConfig)
+      .catch(() => setAuthConfig(null));
+  }, [open]);
   return (
     <Modal
       open={open}
@@ -39,100 +51,142 @@ export function AuthForm({
       title={mode === "signup" ? "Your stories belong here." : "Welcome back."}
       description="Create your journal and find your people."
     >
-      <form
-        className="form-stack"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          setError("");
-          const f = new FormData(e.currentTarget);
-          try {
-            await onSubmit(mode, {
-              email: String(f.get("email")),
-              password: String(f.get("password")),
-              displayName: String(f.get("displayName") ?? ""),
-              inviteCode: String(f.get("inviteCode") ?? ""),
-            });
-            onClose();
-          } catch (err) {
-            setError(
-              err instanceof Error ? err.message : "Sign-in failed. Try again.",
-            );
-          }
-        }}
-      >
-        {mode === "signup" && (
+      {authConfig?.googleEnabled && (
+        <div className="form-stack">
           <label>
-            Your name
+            Beta invitation
             <input
-              name="displayName"
-              required
-              placeholder="What should we call you?"
-              autoComplete="nickname"
+              id="google-invite"
+              placeholder="Only needed when joining"
+              autoComplete="off"
             />
           </label>
-        )}
-        <label>
-          Email
-          <input
-            name="email"
-            type="email"
-            required
-            placeholder="you@example.com"
-            autoComplete="email"
-          />
-        </label>
-        <label>
-          Password
-          <input
-            name="password"
-            type="password"
-            minLength={mode === "signup" ? 12 : 1}
-            required
-            placeholder={
-              mode === "signup" ? "At least 12 characters" : "Your password"
+          <button
+            className="button-primary"
+            onClick={() => {
+              const code =
+                (document.getElementById("google-invite") as HTMLInputElement)
+                  ?.value ?? "";
+              const api =
+                process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
+              const form = document.createElement("form");
+              form.method = "POST";
+              form.action = `${api}/auth/google/start`;
+              const input = document.createElement("input");
+              input.type = "hidden";
+              input.name = "inviteCode";
+              input.value = code;
+              form.append(input);
+              document.body.append(form);
+              form.submit();
+              form.remove();
+            }}
+          >
+            Continue with Google
+          </button>
+          {authConfig.localEnabled && (
+            <small>Local development sign-in is also available below.</small>
+          )}
+        </div>
+      )}
+      {authConfig?.localEnabled !== false && (
+        <form
+          className="form-stack"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setError("");
+            const f = new FormData(e.currentTarget);
+            try {
+              await onSubmit(mode, {
+                email: String(f.get("email")),
+                password: String(f.get("password")),
+                displayName: String(f.get("displayName") ?? ""),
+                inviteCode: String(f.get("inviteCode") ?? ""),
+              });
+              onClose();
+            } catch (err) {
+              setError(
+                err instanceof Error
+                  ? err.message
+                  : "Sign-in failed. Try again.",
+              );
             }
-            autoComplete={
-              mode === "signup" ? "new-password" : "current-password"
-            }
-          />
-        </label>
-        {mode === "signup" && (
-          <label>
-            Invite code
-            <input
-              name="inviteCode"
-              required
-              placeholder="Your beta invitation"
-              defaultValue="LUDEX-LOCAL-BETA"
-            />
-            <small>
-              Local development invitation. Cloud invitations are configured
-              separately.
-            </small>
-          </label>
-        )}
-        {error && (
-          <p className="form-error" role="alert">
-            {error}
-          </p>
-        )}
-        <button className="button full" disabled={busy}>
-          {busy
-            ? "Opening your journal…"
-            : mode === "signup"
-              ? "Create my journal"
-              : "Sign in"}
-        </button>
-        <button
-          type="button"
-          className="text-button"
-          onClick={() => setMode(mode === "signup" ? "login" : "signup")}
+          }}
         >
-          {mode === "signup"
-            ? "Already have a journal? Sign in"
-            : "New here? Create a journal"}
-        </button>
-      </form>
+          {mode === "signup" && (
+            <label>
+              Your name
+              <input
+                name="displayName"
+                required
+                placeholder="What should we call you?"
+                autoComplete="nickname"
+              />
+            </label>
+          )}
+          <label>
+            Email
+            <input
+              name="email"
+              type="email"
+              required
+              placeholder="you@example.com"
+              autoComplete="email"
+            />
+          </label>
+          <label>
+            Password
+            <input
+              name="password"
+              type="password"
+              minLength={mode === "signup" ? 12 : 1}
+              required
+              placeholder={
+                mode === "signup" ? "At least 12 characters" : "Your password"
+              }
+              autoComplete={
+                mode === "signup" ? "new-password" : "current-password"
+              }
+            />
+          </label>
+          {mode === "signup" && (
+            <label>
+              Invite code
+              <input
+                name="inviteCode"
+                required
+                placeholder="Your beta invitation"
+                defaultValue="LUDEX-LOCAL-BETA"
+              />
+              <small>
+                Local development invitation. Cloud invitations are configured
+                separately.
+              </small>
+            </label>
+          )}
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          )}
+          <button className="button full" disabled={busy}>
+            {busy
+              ? "Opening your journal…"
+              : mode === "signup"
+                ? "Create my journal"
+                : "Sign in"}
+          </button>
+          <button
+            type="button"
+            className="text-button"
+            onClick={() => setMode(mode === "signup" ? "login" : "signup")}
+          >
+            {mode === "signup"
+              ? "Already have a journal? Sign in"
+              : "New here? Create a journal"}
+          </button>
+        </form>
+      )}
     </Modal>
   );
 }

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View } from "react-native";
 import { router } from "expo-router";
-import { Button, Text, Banner } from "react-native-paper";
+import { Text, Banner } from "react-native-paper";
 import { useLudex } from "../../state";
 import {
   Page,
@@ -13,24 +13,21 @@ import {
 import { SessionSpread } from "../../features/feed/SessionSpread";
 import { colors } from "../../theme";
 export default function Feed() {
-  const {
-    session,
-    preview,
-    feed,
-    error,
-    newFeed,
-    acceptFeed,
-    refresh,
-    loadPreview,
-    setNotice,
-  } = useLudex();
+  const { session, preview, feed, error, newFeed, acceptFeed, refresh } =
+    useLudex();
   const [media, setMedia] = useState("all");
   return (
     <View style={{ flex: 1 }}>
       <Page title="Ludex" refresh={() => refresh()}>
         <CinematicHeader name="The stories stay." />
         {preview ? (
-          <Text style={{ textAlign: "center", marginBottom: 16, color: colors.muted }}>
+          <Text
+            style={{
+              textAlign: "center",
+              marginBottom: 16,
+              color: colors.muted,
+            }}
+          >
             Preview journal · sample activity
           </Text>
         ) : null}
@@ -41,15 +38,6 @@ export default function Feed() {
             action={() => router.push("/auth")}
             label="Sign in / join"
           />
-        ) : null}
-        {!session && !preview ? (
-          <Button
-            mode="outlined"
-            onPress={() => loadPreview().catch((e) => setNotice(String(e)))}
-            style={{ marginBottom: 22 }}
-          >
-            Explore the sample feed
-          </Button>
         ) : null}
         <MediaFilters value={media} onChange={setMedia} />
         {newFeed ? (

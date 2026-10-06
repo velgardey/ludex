@@ -1,46 +1,35 @@
-# Ludex
+# Ludex · After Hours
 
-An Android-first journal for films, television and games, with a cinematic social feed and configurable showcases. Stage A is a runnable local foundation. Azure deployment and signed-device release acceptance remain separate gates; see `docs/validation/foundation-release.md`.
+An Android-first journal for films, series and games, with a companion website, cinematic showcases, public followers/reviews, shared plans and a grounded conversational companion.
 
-## Run locally
+The current product API is Go + PostgreSQL in `apps/backend`. It uses direct Google OAuth and app-owned sessions, pgx typed SQL, durable progress commands and a separate import worker. Stage A's TypeScript/SQLite API remains available as a recovery/reference implementation; its tests are separate from Go integration tests.
 
-Use Node 26 and pnpm (the lockfile records exact versions).
+## Run the product locally
 
-```sh
-pnpm install
-pnpm dev:api
-```
+1. Prepare `apps/backend/.env.local` from the example and point it at a disposable development PostgreSQL database.
+2. From `apps/backend`: `go run ./cmd/ludex --env .env.local migrate`, then `go run ./cmd/ludex --env .env.local serve`.
+3. From the root: `pnpm build`; serve `out/` on port3001, or run `pnpm dev` on port3000.
+4. Start mobile with `pnpm --filter @ludex/mobile start`. Emulator API address is `http://10.0.2.2:4000/api`; physical phones need reachable HTTPS/LAN settings.
+5. Execute queued imports separately: from `apps/backend`, `go run ./cmd/ludex --env .env.local work`. A scale-to-zero API is not a background scheduler.
 
-In a second terminal:
+The ignored Go env currently points to local PostgreSQL. Supplied Supabase strings are retained in the historical server env; no live database migration or paid deployment has occurred.
 
-```sh
-pnpm dev
-```
+## Implemented product paths
 
-Open http://localhost:3000. The signed-out sample journal is explicitly labeled. New accounts start empty. Local invitation: `LUDEX-LOCAL-BETA`; signup password minimum 12 characters. Local SQLite lives under `.local/` and is ignored by Git. Local password authentication is disabled in cloud mode.
+Persistent library/progress/replay/corrections, privacy/spoiler-aware feed, follows/friendships, review drafts and publication, configurable shelves, collections, settings/moderation; grounded saved companion chat with permission-limited retrieval and confirmed actions; import preview/manual mapping/worker outcomes; browser capture review; shared shortlist/RSVP/scoped discussions and private plan-invitation inbox. Google web/native flows are implemented but require actual provider/device setup validation.
 
-For the Android client:
-
-```sh
-pnpm --filter @ludex/mobile start
-```
-
-Set `EXPO_PUBLIC_API_URL` to a reachable API origin (emulator `http://10.0.2.2:4000/api`; a phone needs a reachable host or HTTPS cloud endpoint). Follow `apps/mobile/README.md` for platform validation and native build notes. Stage A has no active cloud AI or automatic source connectors.
+Cloud AI and embeddings require the app-specific Azure key, exact model rates and user context opt-in. Without these, replies are labeled structured fallback. Steam is a bounded manual library-preview pilot when a key is configured; account verification, achievements and continuous polling are not claimed. RetroAchievements, Trakt continuous OAuth sync and FCM push are not enabled. Emulated titles retain catalog/manual logging.
 
 ## Verify
 
+`pnpm verify` checks lint, workspace types, domain/legacy API/client/web/mobile tests and the static website build. Go tests must also run separately against disposable PostgreSQL:
+
 ```sh
-pnpm verify
-pnpm --filter @ludex/mobile lint
-pnpm test:e2e
-pnpm load:foundation --users 100 --active 20 --rounds 3
-pnpm --filter @ludex/api build:functions
+cd apps/backend
+LUDEX_TEST_DATABASE_URL=postgresql://localhost:55432/ludex_test?sslmode=disable go test -race ./...
+go vet ./...
 ```
 
-Browser tests expect the API and website running. Static-output verification instructions are in `scripts/README.md`. They create two local disposable accounts and delete them after the flow. The load tool creates and removes its own temporary SQLite database and never writes the current journal.
+Android bundle: `pnpm --filter @ludex/mobile export`. Bundle success does not prove Google device sign-in or a store-ready release.
 
-Production website output is static (`out/`). `pnpm start` serves that output; a separately deployed API must be configured through `NEXT_PUBLIC_API_URL` at build time. No private data is embedded in the static build. See `docs/operations/runbook.md`, `PRODUCT.md`, and `DESIGN.md` for the scope and operating requirements.
-
-Internal Android preview APKs are available under `apps/mobile/artifacts/`: the x86_64 build is installed/tested in the emulator, and the ARM64 build supports a USB-connected phone through `adb reverse`. Both use a development certificate. See `apps/mobile/README.md` for the exact setup.
-
-The current visual world is **Midnight Premiere**: Sunburst-generated cinema architecture, coral/chartreuse controls, cinematic story frames, interactive poster fans, and finite preference-aware motion. See `DESIGN.md` and `docs/validation/premiere-redesign.md` for implementation and verification details.
+See [operations](docs/operations/go-beta.md), [credential setup](docs/setup/credentials.md), [runtime routes](api/routes.md), [product](PRODUCT.md), and [design](DESIGN.md). Provider keys belong only in ignored server env files. No secrets are bundled into static output.

@@ -1,7 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowClockwise, Check, LinkSimple, Sparkle, X } from "@phosphor-icons/react";
+import {
+  ArrowClockwise,
+  Check,
+  LinkSimple,
+  Sparkle,
+  X,
+} from "@phosphor-icons/react";
 import { LudexError } from "@ludex/client";
 import {
   createAssistantClient,
@@ -60,7 +66,9 @@ export function Companion({
       return version === requestVersion.current;
     } catch (error) {
       if (version === requestVersion.current) {
-        setLoadError(errorText(error, "Your conversation could not be loaded."));
+        setLoadError(
+          errorText(error, "Your conversation could not be loaded."),
+        );
         setAuthExpired(isAuthError(error));
       }
       return false;
@@ -89,11 +97,7 @@ export function Companion({
   }, [state?.messages, loading, sending]);
 
   const messages = Array.isArray(state?.messages) ? state.messages : [];
-  const remaining = state?.allowance?.remaining;
-  const exhausted =
-    state?.status === "allowance-exhausted" ||
-    state?.status === "disabled" ||
-    (typeof remaining === "number" && remaining <= 0);
+  const exhausted = state?.status === "disabled" || false;
 
   async function send(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -113,7 +117,12 @@ export function Companion({
         resultStatus === "allowance-exhausted"
       ) {
         await refreshState();
-        setLoadError(resultMessage(result, "Your assistant allowance is used for now. Your journal has not changed."));
+        setLoadError(
+          resultMessage(
+            result,
+            "Your assistant allowance is used for now. Your journal has not changed.",
+          ),
+        );
         setAuthExpired(false);
         return;
       }
@@ -131,7 +140,10 @@ export function Companion({
     }
   }
 
-  async function decide(action: AssistantAction, decision: "confirm" | "reject") {
+  async function decide(
+    action: AssistantAction,
+    decision: "confirm" | "reject",
+  ) {
     setBusyAction(action.id);
     setLoadError("");
     setAuthExpired(false);
@@ -144,13 +156,20 @@ export function Companion({
       const resultStatus = objectValue(result)?.status;
       if (resultStatus === "rejected" || resultStatus === "conflict") {
         await refreshState();
-        setLoadError(resultMessage(result, "That action was not accepted. Your journal has not changed."));
+        setLoadError(
+          resultMessage(
+            result,
+            "That action was not accepted. Your journal has not changed.",
+          ),
+        );
         setAuthExpired(false);
         return;
       }
       if (resultStatus === "pending") {
         await refreshState();
-        setNotice("That action is still pending. Your journal has not changed yet.");
+        setNotice(
+          "That action is still pending. Your journal has not changed yet.",
+        );
         return;
       }
 
@@ -158,7 +177,9 @@ export function Companion({
         try {
           await onConfirmed();
         } catch {
-          setNotice("Action confirmed. Your conversation is refreshed, but the library could not reload.");
+          setNotice(
+            "Action confirmed. Your conversation is refreshed, but the library could not reload.",
+          );
           await refreshState();
           return;
         }
@@ -170,7 +191,11 @@ export function Companion({
           : "Dismissed. Refreshing your conversation…",
       );
       if (await refreshState())
-        setNotice(decision === "confirm" ? "Your journal is up to date." : "Suggestion dismissed.");
+        setNotice(
+          decision === "confirm"
+            ? "Your journal is up to date."
+            : "Suggestion dismissed.",
+        );
     } catch (error) {
       await refreshState();
       setLoadError(errorText(error, "That action could not be completed."));
@@ -206,7 +231,7 @@ export function Companion({
         {signedIn && state ? (
           <span className={styles.allowance}>
             {state.allowance && Number.isFinite(state.allowance.remaining)
-              ? `${Math.max(0, state.allowance.remaining)}${Number.isFinite(state.allowance.limit) ? ` of ${state.allowance.limit}` : ""} left`
+              ? `$${Math.max(0, state.allowance.remaining).toFixed(3)}${Number.isFinite(state.allowance.limit) ? ` of $${state.allowance.limit.toFixed(3)}` : ""} today`
               : "Usage details unavailable"}
           </span>
         ) : null}
@@ -224,22 +249,99 @@ export function Companion({
         ) : null}
       </div>
 
+      {signedIn && state ? (
+        <div className={styles.notice}>
+          <strong>Your context, your choice</strong>
+          <p>
+            Cloud replies send only relevant journal entries and conversation
+            context to Azure. This is off until you enable it.
+          </p>
+          <button
+            className="button secondary"
+            disabled={sending || loading}
+            onClick={async () => {
+              setLoadError("");
+              try {
+                const prefs = (await client.request(
+                  "/account/settings",
+                )) as Record<string, unknown>;
+                await client.request("/account/settings", {
+                  ...prefs,
+                  notificationPreferences: {
+                    ...((prefs.notificationPreferences as Record<
+                      string,
+                      boolean
+                    >) ?? {}),
+                    aiCloudConsent: !state.cloudConsent,
+                  },
+                });
+                await refreshState();
+              } catch (e) {
+                setLoadError(errorText(e, "Preference could not be saved."));
+              }
+            }}
+          >
+            {state.cloudConsent
+              ? "Turn off cloud context"
+              : "Enable cloud context"}
+          </button>
+          <button
+            className="text-button"
+            disabled={sending || loading}
+            onClick={async () => {
+              if (
+                !window.confirm(
+                  "Clear your saved conversation and search memory? Usage allowance remains unchanged.",
+                )
+              )
+                return;
+              try {
+                await client.request("/assistant/reset", {}, "POST");
+                await refreshState();
+              } catch (e) {
+                setLoadError(
+                  errorText(e, "Conversation could not be cleared."),
+                );
+              }
+            }}
+          >
+            Clear conversation & search memory
+          </button>
+          {!state.cloudConsent ? (
+            <p>
+              Cloud context is off. Structured library and catalog lookup remain
+              available.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       {state?.status === "unconfigured" ? (
         <div className={styles.notice} role="status">
           <strong>Catalog fallback</strong>
-          Azure AI is not configured for this environment. Catalog searches can still return deterministic matches; those replies are marked and will not be presented as AI-generated.
+          Azure AI is not configured for this environment. Catalog searches can
+          still return deterministic matches; those replies are marked and will
+          not be presented as AI-generated.
         </div>
       ) : null}
       {state && exhausted && state.status !== "disabled" ? (
-        <div className={`${styles.notice} ${styles.noticeWarning}`} role="status">
+        <div
+          className={`${styles.notice} ${styles.noticeWarning}`}
+          role="status"
+        >
           <strong>Allowance reached</strong>
-          You can read this saved conversation. Sending new requests is paused until your allowance refreshes. Pending actions still require your review.
+          You can read this saved conversation. Sending new requests is paused
+          until your allowance refreshes. Pending actions still require your
+          review.
         </div>
       ) : null}
       {state?.status === "disabled" ? (
-        <div className={`${styles.notice} ${styles.noticeWarning}`} role="status">
+        <div
+          className={`${styles.notice} ${styles.noticeWarning}`}
+          role="status"
+        >
           <strong>Unavailable</strong>
-          The assistant service is not accepting requests right now. Your saved messages are still available below.
+          The assistant service is not accepting requests right now. Your saved
+          messages are still available below.
         </div>
       ) : null}
 
@@ -266,7 +368,8 @@ export function Companion({
                 </span>
                 <h3>A quiet place to begin.</h3>
                 <p>
-                  Ask for a film, series, or game. Any change to your journal will wait for your confirmation.
+                  Ask for a film, series, or game. Any change to your journal
+                  will wait for your confirmation.
                 </p>
                 <div className={styles.prompts} aria-label="Example searches">
                   {starterPrompts.map((prompt) => (
@@ -296,7 +399,11 @@ export function Companion({
                 Sending your question…
               </p>
             ) : null}
-            {notice ? <p className={styles.pendingLine} role="status">{notice}</p> : null}
+            {notice ? (
+              <p className={styles.pendingLine} role="status">
+                {notice}
+              </p>
+            ) : null}
             {loadError ? (
               <div className={styles.error} role="alert">
                 {loadError}
@@ -345,12 +452,15 @@ export function Companion({
             <button
               className={styles.send}
               type="submit"
-              disabled={!draft.trim() || loading || sending || exhausted || !state}
+              disabled={
+                !draft.trim() || loading || sending || exhausted || !state
+              }
             >
               {sending ? "Sending…" : "Send"}
             </button>
             <span className={styles.srOnly} id="companion-input-hint">
-              Press Enter to send. Press Shift and Enter for a new line. Your chat is saved to your account.
+              Press Enter to send. Press Shift and Enter for a new line. Your
+              chat is saved to your account.
             </span>
           </form>
         </>
@@ -361,12 +471,15 @@ export function Companion({
           </span>
           <h3>Your conversation stays with your journal.</h3>
           <p>Sign in to load your saved messages and continue privately.</p>
-          <button className={`${styles.send} ${styles.signIn}`} type="button" onClick={onSignIn}>
+          <button
+            className={`${styles.send} ${styles.signIn}`}
+            type="button"
+            onClick={onSignIn}
+          >
             Sign in to continue
           </button>
         </div>
       )}
-
     </section>
   );
 }
@@ -388,13 +501,18 @@ function Message({
   const date = new Date(message.createdAt);
   const timeLabel = Number.isNaN(date.getTime())
     ? ""
-    : new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(date);
+    : new Intl.DateTimeFormat(undefined, {
+        hour: "numeric",
+        minute: "2-digit",
+      }).format(date);
 
   return (
     <article className={`${styles.message} ${user ? styles.messageUser : ""}`}>
       <div className={styles.messageMeta}>
         <span>{user ? "You" : "Ludex companion"}</span>
-        {timeLabel ? <time dateTime={message.createdAt}>{timeLabel}</time> : null}
+        {timeLabel ? (
+          <time dateTime={message.createdAt}>{timeLabel}</time>
+        ) : null}
         {!user && message.fallback ? (
           <span className={styles.fallbackLabel}>Catalog fallback · no AI</span>
         ) : null}
@@ -409,7 +527,11 @@ function Message({
             const contents = (
               <>
                 <span>{citation.label}</span>
-                {citation.excerpt ? <span className={styles.citationExcerpt}>{citation.excerpt}</span> : null}
+                {citation.excerpt ? (
+                  <span className={styles.citationExcerpt}>
+                    {citation.excerpt}
+                  </span>
+                ) : null}
               </>
             );
             return citation.titleId ? (
@@ -433,7 +555,9 @@ function Message({
                 <LinkSimple size={12} aria-hidden="true" /> {contents}
               </a>
             ) : (
-              <div className={styles.citation} key={citation.id}>{contents}</div>
+              <div className={styles.citation} key={citation.id}>
+                {contents}
+              </div>
             );
           })}
         </div>
@@ -445,7 +569,9 @@ function Message({
           <p>{action.summary}</p>
           {action.status === "pending" ? (
             <>
-              <p className={styles.settled}>Nothing changes until you confirm.</p>
+              <p className={styles.settled}>
+                Nothing changes until you confirm.
+              </p>
               <div className={styles.actionButtons}>
                 <button
                   type="button"
@@ -481,7 +607,9 @@ function safeCitationUrl(value?: string) {
   if (value.startsWith("/")) return value;
   try {
     const url = new URL(value);
-    return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
+    return url.protocol === "https:" || url.protocol === "http:"
+      ? url.href
+      : null;
   } catch {
     return null;
   }
@@ -510,5 +638,8 @@ function errorText(error: unknown, fallback: string) {
 }
 
 function isAuthError(error: unknown) {
-  return error instanceof LudexError && (error.status === 401 || error.status === 403);
+  return (
+    error instanceof LudexError &&
+    (error.status === 401 || error.status === 403)
+  );
 }

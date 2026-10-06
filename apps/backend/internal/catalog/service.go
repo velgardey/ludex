@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -337,6 +338,24 @@ func (s *Service) tmdbTitle(ctx context.Context, providerID, media string) (Hit,
 	if media == "show" {
 		ended := strings.EqualFold(item.Status, "Ended")
 		hit.Ended = &ended
+		seasons := []int{}
+		for _, season := range item.Seasons {
+			if season.Number > 0 {
+				seasons = append(seasons, season.Number)
+			}
+		}
+		sort.Ints(seasons)
+		if len(seasons) > 40 {
+			return Hit{}, errors.New("episode catalog exceeds beta season limit")
+		}
+		hit.Episodes = []Episode{}
+		for _, season := range seasons {
+			episodes, e := s.tmdbSeason(ctx, providerID, season, len(hit.Episodes))
+			if e != nil {
+				return Hit{}, e
+			}
+			hit.Episodes = append(hit.Episodes, episodes...)
+		}
 	}
 	return hit, nil
 }
@@ -463,6 +482,9 @@ type tmdbSearchResponse struct {
 }
 
 type tmdbTitleResponse struct {
+	Seasons []struct {
+		Number int `json:"season_number"`
+	} `json:"seasons"`
 	ID           int         `json:"id"`
 	Title        string      `json:"title"`
 	Name         string      `json:"name"`
@@ -704,6 +726,52 @@ func cloneHit(hit Hit) Hit {
 	if hit.Ended != nil {
 		ended := *hit.Ended
 		hit.Ended = &ended
+
 	}
 	return hit
+}
+
+func (s *Service) tmdbSeason(ctx context.Context, show string, season, offset int) ([]Episode, error) {
+	endpoint, e := url.Parse(strings.TrimRight(s.cfg.TMDBBaseURL, "/") + "/tv/" + show + "/season/" + strconv.Itoa(season))
+	if e != nil {
+		return nil, e
+	}
+	if s.cfg.TMDBKey != "" && s.cfg.TMDBToken == "" {
+		q := endpoint.Query()
+		q.Set("api_key", s.cfg.TMDBKey)
+		endpoint.RawQuery = q.Encode()
+	}
+	req, e := s.newRequest(ctx, http.MethodGet, endpoint.String(), nil)
+	if e != nil {
+		return nil, e
+	}
+	if s.cfg.TMDBToken != "" {
+		req.Header.Set("Authorization", "Bearer "+s.cfg.TMDBToken)
+	}
+	var data struct {
+		Episodes []struct {
+			ID     int     `json:"id"`
+			Name   string  `json:"name"`
+			Number int     `json:"episode_number"`
+			Date   *string `json:"air_date"`
+		} `json:"episodes"`
+	}
+	if e = s.doJSON(req, &data); e != nil {
+		return nil, e
+	}
+	sort.Slice(data.Episodes, func(i, j int) bool { return data.Episodes[i].Number < data.Episodes[j].Number })
+	out := []Episode{}
+	for _, item := range data.Episodes {
+		if item.ID <= 0 || item.Number <= 0 {
+			continue
+		}
+		date := ""
+		if item.Date != nil {
+			if at, e := time.Parse("2006-01-02", *item.Date); e == nil {
+				date = at.UTC().Format(time.RFC3339)
+			}
+		}
+		out = append(out, Episode{ID: "tmdb:episode:" + strconv.Itoa(item.ID), Order: offset + len(out) + 1, Title: item.Name, Season: season, Number: item.Number, ReleasedAt: date})
+	}
+	return out, nil
 }

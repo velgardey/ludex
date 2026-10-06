@@ -8,6 +8,9 @@ import React, {
   useState,
 } from "react";
 import * as Haptics from "expo-haptics";
+import * as Crypto from "expo-crypto";
+import * as WebBrowser from "expo-web-browser";
+import { base64url, readGoogleHandoff } from "./auth/google";
 import { AppState, Platform, AccessibilityInfo } from "react-native";
 import { LudexClient, LudexError } from "@ludex/client";
 import type {
@@ -55,6 +58,7 @@ type Context = {
     name: string,
     invite: string,
   ) => Promise<void>;
+  googleLogin: (invite: string) => Promise<void>;
   logout: () => Promise<void>;
   loadPreview: () => Promise<void>;
   refresh: (replace?: boolean) => Promise<void>;
@@ -169,12 +173,25 @@ export function LudexProvider({ children }: { children: React.ReactNode }) {
           client.getSettings(),
         ]);
         if (identity.current !== owner) return;
-        setCatalog(titles);
+        const missing = items.filter(
+          (entry) => !titles.some((t) => t.id === entry.titleId),
+        );
+        const resolved = await Promise.allSettled(
+          missing.map((entry) => client.getTitle(entry.titleId)),
+        );
+        if (identity.current !== owner) return;
+        const allTitles = [
+          ...titles,
+          ...resolved.flatMap((r) =>
+            r.status === "fulfilled" ? [r.value] : [],
+          ),
+        ];
+        setCatalog(allTitles);
         setLibrary(items);
         setShowcase(profile);
         setSettings(prefs);
         await Promise.all([
-          store.cache("catalog", titles, 7 * 86400000),
+          store.cache("catalog", allTitles, 7 * 86400000),
           store.cache("library", items),
           store.cache("settings", prefs),
           store.cache("showcase", profile),
@@ -289,6 +306,38 @@ export function LudexProvider({ children }: { children: React.ReactNode }) {
     await persistSession(s);
     await attach(s);
   };
+  const googleLogin = async (invite: string) => {
+    const bytes = await Crypto.getRandomBytesAsync(32);
+    const verifier = Array.from(bytes, (b) =>
+      b.toString(16).padStart(2, "0"),
+    ).join("");
+    const challenge = base64url(
+      await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        verifier,
+        { encoding: Crypto.CryptoEncoding.BASE64 },
+      ),
+    );
+    const start = await client.request<{ url: string; state: string }>(
+      "/auth/google/native/start",
+      { inviteCode: invite, codeChallenge: challenge },
+      "POST",
+    );
+    const result = await WebBrowser.openAuthSessionAsync(
+      start.url,
+      "ludex://auth",
+    );
+    if (result.type !== "success")
+      throw new Error("Google sign-in was cancelled.");
+    const code = readGoogleHandoff(result.url, start.state);
+    const s = await client.request<Session>(
+      "/auth/google/native/exchange",
+      { code, codeVerifier: verifier },
+      "POST",
+    );
+    await persistSession(s);
+    await attach(s);
+  };
   const logout = async () => {
     try {
       await client.logout();
@@ -307,11 +356,10 @@ export function LudexProvider({ children }: { children: React.ReactNode }) {
     closeRef.current = null;
   };
   const loadPreview = async () => {
-    const data = await client.preview();
-    setPreview(data);
-    setCatalog(data.catalog);
-    setFeed(data.feed);
-    setShowcase(data.showcase);
+    setCatalog(await client.searchCatalog());
+    setPreview(null);
+    setFeed(emptyFeed);
+    setShowcase(null);
   };
   const queue = async (
     kind: "progress" | "library",
@@ -349,6 +397,7 @@ export function LudexProvider({ children }: { children: React.ReactNode }) {
     settings,
     login,
     signup,
+    googleLogin,
     logout,
     loadPreview,
     refresh,

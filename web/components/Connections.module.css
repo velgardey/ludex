@@ -369,6 +369,104 @@
   font-weight: 550;
 }
 
+.reviewToolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid #352a3d;
+}
+
+.importRows {
+  display: grid;
+  gap: 8px;
+  max-height: min(54vh, 560px);
+  overflow: auto;
+  padding: 0 3px 0 0;
+  scrollbar-color: #604b68 #18111f;
+}
+
+.importReviewRow {
+  display: grid;
+  gap: 9px;
+  padding: 11px;
+  border: 1px solid #493650;
+  border-radius: 6px;
+  background: #211827;
+}
+
+.importRowHeading,
+.pagination {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.importRowHeading > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.importRowHeading strong {
+  color: #f2e5f8;
+  font-size: 10px;
+  font-weight: 580;
+}
+
+.importRowHeading span {
+  color: #a894b4;
+  font-size: 8px;
+}
+
+.episodeNeeded {
+  color: #f2dc93;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.rowMatchControls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 9px;
+}
+
+.rowMatchControls > :not(.field) {
+  grid-column: 1 / -1;
+}
+
+.rowMatchControls .titleChoices {
+  max-height: 176px;
+}
+
+.pagination {
+  align-items: center;
+  justify-content: flex-end;
+  padding-top: 10px;
+  color: #b9a9c2;
+  font-size: 9px;
+}
+
+.pagination button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 620px) {
+  .reviewToolbar,
+  .importRowHeading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .rowMatchControls {
+    grid-template-columns: 1fr;
+  }
+}
+
 .matched,
 .unmatched {
   color: #d8ff76;

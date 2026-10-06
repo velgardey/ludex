@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { router } from "expo-router";
 import { Searchbar, Text, Button, Avatar } from "react-native-paper";
-import type { User } from "@ludex/domain";
+import type { User, CatalogHit } from "@ludex/domain";
 import { colors, font } from "../../theme";
 import { useLudex } from "../../state";
 import {
@@ -18,6 +18,29 @@ export default function Discover() {
   const [query, setQuery] = useState("");
   const [media, setMedia] = useState("all");
   const [users, setUsers] = useState<User[]>([]);
+  const [hits, setHits] = useState<CatalogHit[]>([]);
+  useEffect(() => {
+    let active = true;
+    const timer = setTimeout(
+      () =>
+        client
+          .searchCatalog({
+            text: query,
+            media: media === "all" ? undefined : media,
+          })
+          .then((v) => {
+            if (active) setHits(v);
+          })
+          .catch((e) => {
+            if (active) setNotice(e.message);
+          }),
+      300,
+    );
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [query, media, client, setNotice]);
   useEffect(() => {
     if (preview) {
       setUsers(preview.users);
@@ -37,7 +60,10 @@ export default function Discover() {
   return (
     <View style={{ flex: 1 }}>
       <Page title="Discover">
-        <Heading context="Films, series, games and the people who love them." title="Find your next favorite." />
+        <Heading
+          context="Films, series, games and the people who love them."
+          title="Find your next favorite."
+        />
         <Searchbar
           value={query}
           onChangeText={setQuery}
@@ -54,7 +80,7 @@ export default function Discover() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={discoverStyles.catalog}
         >
-          {catalog
+          {(hits.length ? hits : catalog)
             .filter(
               (t) =>
                 (media === "all" || t.media === media) &&
@@ -65,10 +91,7 @@ export default function Discover() {
             ))}
         </ScrollView>
         <View style={discoverStyles.peopleSection}>
-          <Text
-            variant="headlineSmall"
-            style={discoverStyles.peopleTitle}
-          >
+          <Text variant="headlineSmall" style={discoverStyles.peopleTitle}>
             People to follow
           </Text>
           <Text style={[styles.metadata, { marginBottom: 12 }]}>
@@ -140,8 +163,18 @@ const discoverStyles = {
     paddingBottom: 8,
     paddingHorizontal: 2,
   },
-  peopleSection: { marginTop: 22, paddingTop: 18, borderTopWidth: 1, borderColor: colors.outline },
-  peopleTitle: { ...font.semibold, textAlign: "center" as const, marginBottom: 5, color: colors.pearl },
+  peopleSection: {
+    marginTop: 22,
+    paddingTop: 18,
+    borderTopWidth: 1,
+    borderColor: colors.outline,
+  },
+  peopleTitle: {
+    ...font.semibold,
+    textAlign: "center" as const,
+    marginBottom: 5,
+    color: colors.pearl,
+  },
   personRow: {
     paddingHorizontal: 8,
     paddingVertical: 6,

@@ -40,3 +40,12 @@ test("command conflicts return the typed receipt so durable outbox stops retryin
     currentVersion: 3,
   });
 });
+test("web client includes protected Google session cookies", async () => {
+  let credentials: RequestCredentials | undefined;
+  const client = new LudexClient({ fetch: async (_input, options) => {
+    credentials = options?.credentials;
+    return new Response(JSON.stringify({ id: "google-user" }));
+  }});
+  await client.me();
+  assert.equal(credentials, "include");
+});

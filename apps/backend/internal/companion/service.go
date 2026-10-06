@@ -1,6 +1,7 @@
 package companion
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -24,20 +25,23 @@ type Service struct {
 
 func New(db *pgxpool.Pool, cfg Config) http.Handler {
 	cfg = normalizeConfig(cfg)
-	client := cfg.HTTPClient
-	if client == nil {
-		client = &http.Client{Timeout: cfg.RequestTimeout}
-	} else if client.Timeout == 0 || client.Timeout > cfg.RequestTimeout {
-		bounded := *client
-		bounded.Timeout = cfg.RequestTimeout
-		client = &bounded
+
+	client := &http.Client{}
+	if cfg.HTTPClient != nil {
+		*client = *cfg.HTTPClient
 	}
+	if client.Timeout == 0 || client.Timeout > cfg.RequestTimeout {
+		client.Timeout = cfg.RequestTimeout
+	}
+	// Provider requests carry a custom API key. Never forward it on redirects.
+	client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 	service := &Service{db: db, cfg: cfg, store: serviceStore{db: db}, budget: newBudgetStore(db, cfg.Limits), client: client}
 	router := chi.NewRouter()
 	router.Get("/state", service.state)
 	router.Get("/history", service.history)
 	router.Get("/messages", service.history)
 	router.Post("/messages", service.message)
+	router.Post("/reset", service.reset)
 	router.Post("/actions/{actionID}/confirm", service.confirmAction)
 	router.Post("/actions/{actionID}/reject", service.rejectAction)
 	return router
@@ -97,7 +101,7 @@ func (s *Service) state(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	status := s.stateStatus(allowance)
-	writeJSON(w, http.StatusOK, StateResponse{Status: status, Allowance: allowance, Messages: messages})
+	writeJSON(w, http.StatusOK, StateResponse{Status: status, Allowance: allowance, Messages: messages, CloudConsent: s.cloudAllowed(r.Context(), userID)})
 }
 
 func (s *Service) history(w http.ResponseWriter, r *http.Request) {
@@ -177,7 +181,7 @@ func (s *Service) message(w http.ResponseWriter, r *http.Request) {
 		fallback      bool
 		status        string
 	)
-	if !s.responsesReady() {
+	if !s.responsesReady() || !s.cloudAllowed(r.Context(), userID) {
 		assistantText, citations = fallbackReply(request.Text, retrieved.Docs)
 		fallback, status = true, "fallback"
 	} else {
@@ -367,4 +371,36 @@ func payloadHash(payload []byte) string {
 		return ""
 	}
 	return contentHash(string(canonical))
+}
+
+func (s *Service) cloudAllowed(ctx context.Context, user string) bool {
+	if s.cfg.CloudConsent == nil {
+		return false
+	}
+	allowed, e := s.cfg.CloudConsent(ctx, user)
+	return e == nil && allowed
+}
+func (s *Service) reset(w http.ResponseWriter, r *http.Request) {
+	user, ok := s.resolveUser(w, r)
+	if !ok {
+		return
+	}
+	tx, e := s.db.Begin(r.Context())
+	if e != nil {
+		writeError(w, 500, "reset-failed", "Conversation could not be cleared.", 0)
+		return
+	}
+	defer tx.Rollback(r.Context())
+	_, e = tx.Exec(r.Context(), "DELETE FROM assistant_conversations WHERE user_id=$1", user)
+	if e == nil {
+		_, e = tx.Exec(r.Context(), "DELETE FROM assistant_embeddings WHERE user_id=$1", user)
+	}
+	if e == nil {
+		e = tx.Commit(r.Context())
+	}
+	if e != nil {
+		writeError(w, 500, "reset-failed", "Conversation could not be cleared.", 0)
+		return
+	}
+	writeJSON(w, 200, map[string]string{"status": "cleared"})
 }

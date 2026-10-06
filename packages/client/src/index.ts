@@ -57,6 +57,7 @@ export class LudexClient {
   async request<T>(path: string, body?: unknown, method?: string): Promise<T> {
     const response = await this.transport(`${this.baseUrl}${path}`, {
       method: method ?? (body === undefined ? "GET" : "POST"),
+      credentials: "include",
       headers: {
         Accept: "application/json",
         ...(body === undefined ? {} : { "Content-Type": "application/json" }),

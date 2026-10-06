@@ -36,6 +36,8 @@ import { PremiereStage } from "./components/PremiereStage";
 import { Library } from "./components/Library";
 import { Profile } from "./components/Profile";
 import { Companion } from "./components/Companion";
+import { Connections } from "./components/Connections";
+import { Plans } from "./components/Plans";
 import { AuthForm, LogForm, ShowcaseEditor } from "./components/Forms";
 import { Artwork, Avatar, Empty, Modal } from "./components/Primitives";
 type Page =
@@ -67,14 +69,27 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
     [toast, setToast] = useState(""),
     [search, setSearch] = useState(""),
     [media, setMedia] = useState("All"),
+    [searchTitles, setSearchTitles] = useState<CatalogHit[] | null>(null),
+    [searchPending, setSearchPending] = useState(false),
+    [searchError, setSearchError] = useState(""),
     [discussion, setDiscussion] = useState<Activity | null>(null),
     [replies, setReplies] = useState<
       { id: string; text?: string; author: User; detailHidden: boolean }[]
     >([]),
     [menuActivity, setMenuActivity] = useState<Activity | null>(null),
     [companion, setCompanion] = useState(false),
+    [connections, setConnections] = useState(false),
     [settings, setSettings] = useState<Record<string, unknown>>({}),
     [notifications, setNotifications] = useState(false),
+    [inbox, setInbox] = useState<
+      {
+        id: string;
+        kind: string;
+        body: { title?: string; planId?: string };
+        createdAt: string;
+      }[]
+    >([]),
+    [inboxError, setInboxError] = useState(""),
     [reviewTitle, setReviewTitle] = useState<CatalogHit | null>(null),
     [undo, setUndo] = useState<{
       eventId: string;
@@ -83,12 +98,35 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
     } | null>(null),
     [profileShowcase, setProfileShowcase] = useState<Showcase | null>(null);
   const [settingsToken, setSettingsToken] = useState<string | null>(null);
-  const artEnabled = data.ready && (!session || (settingsToken === session.token && !Boolean(settings.lowData)));
+  const artEnabled =
+    data.ready &&
+    (!session ||
+      (settingsToken === session.token && !Boolean(settings.lowData)));
   const scrollPositions = useRef<Record<string, number>>({});
   const replyPending = useRef(false);
   const [replyBusy, setReplyBusy] = useState(false);
   const accountToken = useRef(session?.token);
-  useLayoutEffect(() => { accountToken.current = session?.token; }, [session?.token]);
+  useLayoutEffect(() => {
+    accountToken.current = session?.token;
+  }, [session?.token]);
+  useEffect(() => {
+    let active = true;
+    if (!notifications || !session) return;
+    client
+      .request<typeof inbox>("/notifications")
+      .then((v) => {
+        if (active) {
+          setInbox(v);
+          setInboxError("");
+        }
+      })
+      .catch((e) => {
+        if (active) setInboxError(e.message);
+      });
+    return () => {
+      active = false;
+    };
+  }, [notifications, session, client]);
   const followed = Object.keys(data.social).filter(
     (id) => data.social[id].following,
   );
@@ -304,7 +342,40 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
   };
   const activeProfile = profileUser ?? session?.user ?? people[0];
   const activeShowcase = profileUser ? profileShowcase : showcase;
-  const filteredCatalog = catalog.filter(
+  useEffect(() => {
+    let active = true;
+    const timer = setTimeout(async () => {
+      if (page !== "discover") return;
+      setSearchPending(true);
+      try {
+        const hits = await client.searchCatalog({
+          text: search,
+          media:
+            media === "All"
+              ? undefined
+              : media.toLowerCase() === "films"
+                ? "movie"
+                : media.toLowerCase() === "series"
+                  ? "show"
+                  : "game",
+        });
+        if (active) {
+          setSearchTitles(hits);
+          setSearchError("");
+        }
+      } catch (e) {
+        if (active)
+          setSearchError(e instanceof Error ? e.message : "Search unavailable");
+      } finally {
+        if (active) setSearchPending(false);
+      }
+    }, 300);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [page, search, media, client]);
+  const filteredCatalog = (searchTitles ?? catalog).filter(
     (t) =>
       (media === "All" ||
         t.media ===
@@ -350,7 +421,11 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
           <span className="lounge-symbol">
             <FilmSlate size={25} />
           </span>
-          <p>After hours,<br />together.</p>
+          <p>
+            After hours,
+            <br />
+            together.
+          </p>
           <span>Films. Series. Games.</span>
         </div>
         <button className="assistant-entry" onClick={() => setCompanion(true)}>
@@ -458,7 +533,13 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
             )}
             {page === "feed" && (
               <>
-                <PremiereStage mode="feed" artEnabled={artEnabled} catalog={catalog} onTitle={openTitle} onAction={() => requireAccount(() => setLogTitle(catalog[0]))} />
+                <PremiereStage
+                  mode="feed"
+                  artEnabled={artEnabled}
+                  catalog={catalog}
+                  onTitle={openTitle}
+                  onAction={() => requireAccount(() => setLogTitle(catalog[0]))}
+                />
                 <div className="feed-filter">
                   <div>
                     <button
@@ -552,7 +633,19 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
             )}
             {page === "discover" && (
               <>
-                <PremiereStage mode="discover" artEnabled={artEnabled} catalog={catalog} onTitle={openTitle} onAction={() => document.querySelector<HTMLInputElement>('[aria-label="Search catalog"]')?.focus()} />
+                <PremiereStage
+                  mode="discover"
+                  artEnabled={artEnabled}
+                  catalog={catalog}
+                  onTitle={openTitle}
+                  onAction={() =>
+                    document
+                      .querySelector<HTMLInputElement>(
+                        '[aria-label="Search catalog"]',
+                      )
+                      ?.focus()
+                  }
+                />
                 <label className="search-field">
                   <MagnifyingGlass size={21} />
                   <input
@@ -577,6 +670,10 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
                   </div>
                 </div>
                 <div className="discover-grid">
+                  {searchPending ? (
+                    <p role="status">Searching the catalog…</p>
+                  ) : null}
+                  {searchError ? <p role="alert">{searchError}</p> : null}
                   {filteredCatalog.map((t) => (
                     <button
                       className="discover-title"
@@ -719,17 +816,14 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
                         onClick={() =>
                           void run(async () => {
                             const result = await client.exportAccount();
-                            const response = await fetch(result.downloadUrl, {
-                              headers: {
-                                Authorization: `Bearer ${session.token}`,
-                              },
-                            });
-                            if (!response.ok)
-                              throw new Error(
-                                "Export download failed. Generate a new export.",
-                              );
+                            const payload = await client.request(
+                              "/account/download?id=" +
+                                encodeURIComponent(result.downloadId),
+                            );
                             const url = URL.createObjectURL(
-                              await response.blob(),
+                              new Blob([JSON.stringify(payload, null, 2)], {
+                                type: "application/json",
+                              }),
                             );
                             const anchor = document.createElement("a");
                             anchor.href = url;
@@ -740,6 +834,25 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
                         }
                       >
                         Export my journal <ArrowUpRight size={16} />
+                      </button>
+                    </section>
+                    <section>
+                      <h2>Bring your world together</h2>
+                      <p>
+                        Import the journal you already keep. Plan the next story
+                        with your friends.
+                      </p>
+                      <button
+                        className="button secondary"
+                        onClick={() => setConnections(true)}
+                      >
+                        Connections & imports <ArrowUpRight size={16} />
+                      </button>
+                      <button
+                        className="button secondary"
+                        onClick={() => go("plan")}
+                      >
+                        Shared watch & play plans <ArrowUpRight size={16} />
                       </button>
                     </section>
                     <section>
@@ -818,14 +931,12 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
               />
             )}
             {page === "plan" && (
-              <Empty
-                title="A story, shared."
-                description="Shared shortlists, RSVP and episode discussions arrive with the companion stage. For now, save a title and start your journal."
-                action={
-                  <button className="button" onClick={() => go("discover")}>
-                    Discover a title <ArrowUpRight size={16} />
-                  </button>
-                }
+              <Plans
+                client={client}
+                signedIn={Boolean(session)}
+                sessionKey={session?.user.id ?? null}
+                catalog={catalog}
+                onSignIn={() => setAuth(true)}
               />
             )}
             {page === "collection" && (
@@ -871,7 +982,8 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
                       </span>
                       <h3>{t.title}</h3>
                       <p>
-                        {t.year} · {t.genres?.slice(0, 2).join(" / ") ?? t.media}
+                        {t.year} ·{" "}
+                        {t.genres?.slice(0, 2).join(" / ") ?? t.media}
                       </p>
                       <span className="continue-text">
                         Continue your journal <ArrowRight size={13} />
@@ -921,14 +1033,13 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
               <div
                 className="lounge-invite"
                 style={{
-                  backgroundImage: artEnabled ?
-                    "linear-gradient(180deg,transparent,#160d20),url(/art/premiere.webp)" : undefined,
+                  backgroundImage: artEnabled
+                    ? "linear-gradient(180deg,transparent,#160d20),url(/art/premiere.webp)"
+                    : undefined,
                 }}
               >
                 <FilmSlate size={23} />
-                <h3>
-                  Find your people.
-                </h3>
+                <h3>Find your people.</h3>
                 <p>
                   Explore their showcases. Compare notes. Start a conversation.
                 </p>
@@ -1197,6 +1308,24 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
         </Modal>
       )}
       <Modal
+        open={connections}
+        onClose={() => setConnections(false)}
+        title="Every story, in one place."
+        description="Preview imports and confirm captures before they change your journal."
+        wide
+      >
+        <Connections
+          catalog={catalog}
+          client={client}
+          signedIn={Boolean(session)}
+          sessionKey={session?.user.id ?? null}
+          onSignIn={() => {
+            setConnections(false);
+            setAuth(true);
+          }}
+        />
+      </Modal>
+      <Modal
         open={companion}
         onClose={() => setCompanion(false)}
         title="A companion for your curiosity."
@@ -1219,7 +1348,11 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
             setCompanion(false);
             const title = catalog.find((entry) => entry.id === titleId);
             if (title) openTitle(title);
-            else void client.getTitle(titleId).then(openTitle).catch((error) => notify(error.message));
+            else
+              void client
+                .getTitle(titleId)
+                .then(openTitle)
+                .catch((error) => notify(error.message));
           }}
         />
       </Modal>
@@ -1229,10 +1362,39 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
         title="The quiet corner."
         description="Direct interactions come first. Ordinary progress stays in your feed."
       >
-        <Empty
-          title="You’re all caught up."
-          description="Replies, mentions and shared-plan invitations will appear here when the notification stage is enabled."
-        />
+        {!session ? (
+          <Empty
+            title="Your invitations live here."
+            description="Sign in to see direct interactions."
+          />
+        ) : inboxError ? (
+          <p role="alert">{inboxError}</p>
+        ) : inbox.length ? (
+          <div className="activity-list">
+            {inbox.map((item) => (
+              <article key={item.id} className="journal-section">
+                <small>{new Date(item.createdAt).toLocaleString()}</small>
+                <h3>{item.body.title ?? item.kind.replaceAll("-", " ")}</h3>
+                {item.body.planId ? (
+                  <button
+                    className="button secondary"
+                    onClick={() => {
+                      setNotifications(false);
+                      go("plan");
+                    }}
+                  >
+                    Open shared plans <ArrowUpRight size={16} />
+                  </button>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        ) : (
+          <Empty
+            title="You’re all caught up."
+            description="Shared-plan invitations appear here. Ordinary progress stays in your feed."
+          />
+        )}
       </Modal>
       {reviewTitle && (
         <ReviewEditor

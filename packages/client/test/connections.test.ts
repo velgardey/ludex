@@ -58,6 +58,42 @@ test("preview sends pasted or uploaded CSV to the server and commit requires the
   await assert.rejects(client.readImportJob("https://example.com/steal"), /poll URL/i);
 });
 
+test("import review searches the real catalog and maps a selected title and episode to one row", async () => {
+  const calls: unknown[][] = [];
+  const matches = [{ id: "tmdb:show:42", title: "Example Show", media: "show" }];
+  const mapped = {
+    id: "row-1",
+    status: "matched",
+    matchedTitleId: "tmdb:show:42",
+    episodeId: "tmdb:episode:42:1",
+  };
+  const client = createConnectionsClient({
+    request: async (...args: unknown[]) => {
+      calls.push(args);
+      return calls.length === 1 ? matches : mapped;
+    },
+  });
+
+  assert.deepEqual(await client.searchCatalog("Example Show", "show"), matches);
+  assert.deepEqual(await client.matchImportRow("batch/one", "row/one", {
+    titleId: "tmdb:show:42",
+    episodeId: "tmdb:episode:42:1",
+  }), mapped);
+  assert.deepEqual(calls, [
+    ["/catalog/search?text=Example+Show&media=show"],
+    ["/imports/batch%2Fone/rows/row%2Fone/match", { titleId: "tmdb:show:42", episodeId: "tmdb:episode:42:1" }],
+  ]);
+});
+
+test("import row mapping rejects empty identifiers before making a request", async () => {
+  let requests = 0;
+  const client = createConnectionsClient({ request: async () => { requests++; return {}; } });
+
+  await assert.rejects(client.matchImportRow("batch-1", "row-1", { titleId: " " }), /title/i);
+  await assert.rejects(client.matchImportRow("batch-1", "row-1", { titleId: "tmdb:show:1", episodeId: " " }), /episode/i);
+  assert.equal(requests, 0);
+});
+
 test("Steam preview and observation confirmation require explicit user choices", async () => {
   const calls: unknown[][] = [];
   const preview = { observations: [{ id: "steam-1", title: "A game", appId: "42", status: "matched" }] };

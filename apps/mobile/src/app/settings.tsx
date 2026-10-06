@@ -47,7 +47,15 @@ export default function Settings() {
     >
       <Text
         variant="headlineMedium"
-        style={[display, { fontSize: 29, lineHeight: 36, textAlign: "center", marginBottom: 20 }]}
+        style={[
+          display,
+          {
+            fontSize: 29,
+            lineHeight: 36,
+            textAlign: "center",
+            marginBottom: 20,
+          },
+        ]}
       >
         Your journal. Your choices.
       </Text>
@@ -58,13 +66,19 @@ export default function Settings() {
       ) : (
         <>
           <Text variant="titleMedium">{session.user.displayName}</Text>
+          <Button icon="connection" onPress={() => router.push("/connections")}>
+            Connections & imports
+          </Button>
+          <Button icon="calendar-star" onPress={() => router.push("/plans")}>
+            Shared watch & play plans
+          </Button>
           {session.user.roles.includes("moderator") ? (
             <Button onPress={() => router.push("/moderation")}>
               Open moderation reports
             </Button>
           ) : null}
           <Text style={styles.metadata}>
-            Local beta session · expires{" "}
+            Ludex session · expires{" "}
             {new Date(session.expiresAt).toLocaleDateString()}
           </Text>
           <Divider style={{ marginVertical: 24 }} />
@@ -289,9 +303,8 @@ export default function Settings() {
         </>
       )}
       <Text style={[styles.metadata, { marginTop: 30 }]}>
-        Ludex Stage A uses manual logs. Steam, imports, desktop Netflix capture
-        and companion cloud replies arrive through later integration gates. No
-        background presence is enabled.
+        Imports and browser captures always wait for review. Cloud companion
+        replies use a capped allowance when the service is configured.
       </Text>
     </ScrollView>
   );

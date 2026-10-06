@@ -496,6 +496,7 @@ func testCloudConfig(userID, endpoint string, loader func(context.Context, strin
 		AzureDeployment:    "gpt-6-luna",
 		AzureAPIKey:        "server-only-key",
 		AzureEnabled:       true,
+		CloudConsent:       func(context.Context, string) (bool, error) { return true, nil },
 		LoadLibrary:        loader,
 		ResolveUser:        testResolveUser,
 		HTTPClient:         &http.Client{Timeout: 2 * time.Second},
