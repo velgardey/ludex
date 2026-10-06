@@ -1,0 +1,15 @@
+{
+  "name": "@ludex/client",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@ludex/contracts": "workspace:*",
+    "@ludex/domain": "workspace:*"
+  }
+}

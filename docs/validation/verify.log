@@ -1,0 +1,133 @@
+$ pnpm lint && pnpm typecheck && pnpm test && pnpm build
+$ eslint
+$ tsc --noEmit && pnpm --filter "./packages/*" --filter "./apps/*" --if-present typecheck
+Scope: 6 of 7 workspace projects
+packages/design typecheck$ tsc --noEmit
+packages/domain typecheck$ tsc --noEmit
+packages/domain typecheck: Done
+packages/design typecheck: Done
+packages/contracts typecheck$ tsc --noEmit
+packages/contracts typecheck: Done
+packages/client typecheck$ tsc --noEmit
+apps/api typecheck$ tsc --noEmit
+packages/client typecheck: Done
+apps/api typecheck: Done
+apps/mobile typecheck$ tsc --noEmit
+apps/mobile typecheck: Done
+$ pnpm test:domain && pnpm test:api && pnpm test:client && pnpm test:web && pnpm test:mobile
+$ node --test packages/domain/test/*.test.ts
+✔ TV gaps and skipped episodes do not reveal required spoilers (0.79335ms)
+✔ ratings optional and integer ten point only (0.261688ms)
+✔ game story completion does not manufacture achievements; rewatches retain runs (0.754155ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 99.6849
+$ node --test apps/api/test/*.test.ts
+✔ invited signup makes real empty account and hashed credentials; session persists and revoked token denied (89.395239ms)
+✔ OIDC rejects unsigned and misconfigured tokens without accepting local passwords (0.350718ms)
+✔ OIDC verifies RS256 issuer audience expiry and invited subject binding using a local JWKS (83.118745ms)
+✔ HTTP authenticates principals, enforces CORS/body validation and starts with empty real account (79.704487ms)
+✔ OIDC invitation binding reserves cohort slot once and never accepts client roles (3.680404ms)
+✔ SQLite durable transactions roll back, enforce scope and compare ETags (5.460662ms)
+✔ progress retries exactly once, changed receipt payload rejects and stale edit conflicts (91.037104ms)
+✔ private logs have no social projection and correction immediately retracts public activity (75.432057ms)
+✔ follows grant public only, friendship accept grants friends, block overrides both directions (68.755792ms)
+✔ spoiler text omitted from JSON until all episode requirements watched (70.237151ms)
+✔ showcase private shelves omitted; owner version checked; deletion cuts sessions and visibility immediately (72.11818ms)
+✔ social showcase and collection retries preserve exact receipt in their transaction (67.830952ms)
+✔ hidden title/art and blocked reply bodies absent from JSON (68.999186ms)
+✔ circles require owner membership and review edits retract immediately (69.802464ms)
+✔ historical observations remain quiet and current audience prevents publication retry (68.588964ms)
+✔ publication drain skips completed receipts rather than starving after first page (95.093983ms)
+✔ expired owner export is unavailable and excludes third-party private records (73.800563ms)
+✔ policy changes invalidate cursor and pages have no duplicate boundary (71.609834ms)
+✔ spoiler scopes reject empty requirements and mismatched title bindings (69.501231ms)
+✔ account deletion denies a previously authenticated principal writing any new data (67.757623ms)
+✔ conflicted deletion remains queued until confirmed cleanup retry (67.969636ms)
+✔ concurrent identical corrections return identical accepted receipts (69.680221ms)
+✔ expired exports are removed and re-export keeps one active snapshot (69.956437ms)
+✔ deletion tombstone defeats an already in-flight progress transaction (68.844671ms)
+✔ deletion guard conflict leaves recoverable queued job and worker closes it before cleanup (68.25567ms)
+ℹ tests 25
+ℹ suites 0
+ℹ pass 25
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1628.905232
+$ node --test packages/client/test/*.test.ts
+✔ default browser fetch keeps its required global receiver (20.772269ms)
+✔ command conflicts return the typed receipt so durable outbox stops retrying (1.564116ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 121.773093
+$ vitest run web/test
+
+ RUN  v3.2.7 /home/velgardey/.codex/worktrees/ludex-stage-a/ludex
+
+ ✓ web/test/feed.test.ts (2 tests) 2ms
+ ✓ web/test/commands.test.ts (2 tests) 4ms
+
+ Test Files  2 passed (2)
+      Tests  4 passed (4)
+   Start at  21:15:47
+   Duration  322ms (transform 50ms, setup 0ms, collect 56ms, tests 6ms, environment 0ms, prepare 159ms)
+
+$ pnpm --filter @ludex/mobile test --runInBand
+$ jest --runInBand
+PASS test/log-ui.test.tsx
+PASS test/outbox.test.ts
+PASS test/log.test.ts
+PASS test/links.test.ts
+PASS test/feed-revocation.test.ts
+PASS test/poll.test.ts
+PASS test/feed-model.test.ts
+
+Test Suites: 7 passed, 7 total
+Tests:       26 passed, 26 total
+Snapshots:   0 total
+Time:        2.647 s
+Ran all test suites.
+$ next build
+▲ Next.js 16.3.8 (Turbopack)
+✓ Running next.config.ts took 84ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 1490ms
+  Running TypeScript ...
+  Finished TypeScript in 2.2s ...
+  Collecting page data using 11 workers ...
+  Generating static pages using 11 workers (0/14) ...
+  Generating static pages using 11 workers (3/14)
+  Generating static pages using 11 workers (6/14)
+  Generating static pages using 11 workers (10/14)
+✓ Generating static pages using 11 workers (14/14) in 253ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /activity
+├ ○ /collection
+├ ○ /discover
+├ ○ /library
+├ ○ /moderation
+├ ○ /plan
+├ ○ /privacy
+├ ○ /profile
+├ ○ /settings
+└ ○ /title
+
+
+○  (Static)  prerendered as static content

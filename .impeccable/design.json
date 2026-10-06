@@ -1,0 +1,445 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-06T15:03:30Z",
+  "title": "Design System: Ludex",
+  "extensions": {
+    "colorMeta": {
+      "violet": {
+        "role": "primary",
+        "displayName": "Lounge Violet",
+        "canonical": "#B6A3CF",
+        "tonalRamp": [
+          "oklch(15% 0.066 304.5)",
+          "oklch(25% 0.066 304.5)",
+          "oklch(35% 0.066 304.5)",
+          "oklch(45% 0.066 304.5)",
+          "oklch(55% 0.066 304.5)",
+          "oklch(65% 0.066 304.5)",
+          "oklch(80% 0.066 304.5)",
+          "oklch(95% 0.066 304.5)"
+        ]
+      },
+      "copper": {
+        "role": "secondary",
+        "displayName": "Story Copper",
+        "canonical": "#C89571",
+        "tonalRamp": [
+          "oklch(15% 0.079 56.3)",
+          "oklch(25% 0.079 56.3)",
+          "oklch(35% 0.079 56.3)",
+          "oklch(45% 0.079 56.3)",
+          "oklch(55% 0.079 56.3)",
+          "oklch(65% 0.079 56.3)",
+          "oklch(80% 0.079 56.3)",
+          "oklch(95% 0.079 56.3)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Plum Ink",
+        "canonical": "#15121C",
+        "tonalRamp": [
+          "oklch(15% 0.020 298.2)",
+          "oklch(25% 0.020 298.2)",
+          "oklch(35% 0.020 298.2)",
+          "oklch(45% 0.020 298.2)",
+          "oklch(55% 0.020 298.2)",
+          "oklch(65% 0.020 298.2)",
+          "oklch(80% 0.020 298.2)",
+          "oklch(95% 0.020 298.2)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Lounge Surface",
+        "canonical": "#211D28",
+        "tonalRamp": [
+          "oklch(15% 0.021 301.4)",
+          "oklch(25% 0.021 301.4)",
+          "oklch(35% 0.021 301.4)",
+          "oklch(45% 0.021 301.4)",
+          "oklch(55% 0.021 301.4)",
+          "oklch(65% 0.021 301.4)",
+          "oklch(80% 0.021 301.4)",
+          "oklch(95% 0.021 301.4)"
+        ]
+      },
+      "raised": {
+        "role": "neutral",
+        "displayName": "Raised Plum",
+        "canonical": "#272334",
+        "tonalRamp": [
+          "oklch(15% 0.032 295.0)",
+          "oklch(25% 0.032 295.0)",
+          "oklch(35% 0.032 295.0)",
+          "oklch(45% 0.032 295.0)",
+          "oklch(55% 0.032 295.0)",
+          "oklch(65% 0.032 295.0)",
+          "oklch(80% 0.032 295.0)",
+          "oklch(95% 0.032 295.0)"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Pearl Text",
+        "canonical": "#E8E4DF",
+        "tonalRamp": [
+          "oklch(15% 0.008 73.7)",
+          "oklch(25% 0.008 73.7)",
+          "oklch(35% 0.008 73.7)",
+          "oklch(45% 0.008 73.7)",
+          "oklch(55% 0.008 73.7)",
+          "oklch(65% 0.008 73.7)",
+          "oklch(80% 0.008 73.7)",
+          "oklch(95% 0.008 73.7)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted Lavender",
+        "canonical": "#A99FB4",
+        "tonalRamp": [
+          "oklch(15% 0.032 307.0)",
+          "oklch(25% 0.032 307.0)",
+          "oklch(35% 0.032 307.0)",
+          "oklch(45% 0.032 307.0)",
+          "oklch(55% 0.032 307.0)",
+          "oklch(65% 0.032 307.0)",
+          "oklch(80% 0.032 307.0)",
+          "oklch(95% 0.032 307.0)"
+        ]
+      },
+      "native-muted": {
+        "role": "neutral",
+        "displayName": "Native Muted",
+        "canonical": "#AAA3B3",
+        "tonalRamp": [
+          "oklch(15% 0.024 305.5)",
+          "oklch(25% 0.024 305.5)",
+          "oklch(35% 0.024 305.5)",
+          "oklch(45% 0.024 305.5)",
+          "oklch(55% 0.024 305.5)",
+          "oklch(65% 0.024 305.5)",
+          "oklch(80% 0.024 305.5)",
+          "oklch(95% 0.024 305.5)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Plum Divider",
+        "canonical": "#322C3B",
+        "tonalRamp": [
+          "oklch(15% 0.028 303.0)",
+          "oklch(25% 0.028 303.0)",
+          "oklch(35% 0.028 303.0)",
+          "oklch(45% 0.028 303.0)",
+          "oklch(55% 0.028 303.0)",
+          "oklch(65% 0.028 303.0)",
+          "oklch(80% 0.028 303.0)",
+          "oklch(95% 0.028 303.0)"
+        ]
+      },
+      "native-outline": {
+        "role": "neutral",
+        "displayName": "Native Outline",
+        "canonical": "#514A5D",
+        "tonalRamp": [
+          "oklch(15% 0.032 301.8)",
+          "oklch(25% 0.032 301.8)",
+          "oklch(35% 0.032 301.8)",
+          "oklch(45% 0.032 301.8)",
+          "oklch(55% 0.032 301.8)",
+          "oklch(65% 0.032 301.8)",
+          "oklch(80% 0.032 301.8)",
+          "oklch(95% 0.032 301.8)"
+        ]
+      },
+      "native-error": {
+        "role": "error",
+        "displayName": "Native Error",
+        "canonical": "#FFB4AB",
+        "tonalRamp": [
+          "oklch(15% 0.089 26.8)",
+          "oklch(25% 0.089 26.8)",
+          "oklch(35% 0.089 26.8)",
+          "oklch(45% 0.089 26.8)",
+          "oklch(55% 0.089 26.8)",
+          "oklch(65% 0.089 26.8)",
+          "oklch(80% 0.089 26.8)",
+          "oklch(95% 0.089 26.8)"
+        ]
+      },
+      "matinee-accent": {
+        "role": "primary",
+        "displayName": "Matinee Accent",
+        "canonical": "#CFB290",
+        "tonalRamp": [
+          "oklch(15% 0.057 71.3)",
+          "oklch(25% 0.057 71.3)",
+          "oklch(35% 0.057 71.3)",
+          "oklch(45% 0.057 71.3)",
+          "oklch(55% 0.057 71.3)",
+          "oklch(65% 0.057 71.3)",
+          "oklch(80% 0.057 71.3)",
+          "oklch(95% 0.057 71.3)"
+        ]
+      },
+      "midnight-accent-web": {
+        "role": "primary",
+        "displayName": "Midnight Accent Web",
+        "canonical": "#A9B5D1",
+        "tonalRamp": [
+          "oklch(15% 0.042 267.0)",
+          "oklch(25% 0.042 267.0)",
+          "oklch(35% 0.042 267.0)",
+          "oklch(45% 0.042 267.0)",
+          "oklch(55% 0.042 267.0)",
+          "oklch(65% 0.042 267.0)",
+          "oklch(80% 0.042 267.0)",
+          "oklch(95% 0.042 267.0)"
+        ]
+      },
+      "midnight-accent-native": {
+        "role": "primary",
+        "displayName": "Midnight Accent Native",
+        "canonical": "#B1B7DC",
+        "tonalRamp": [
+          "oklch(15% 0.053 277.9)",
+          "oklch(25% 0.053 277.9)",
+          "oklch(35% 0.053 277.9)",
+          "oklch(45% 0.053 277.9)",
+          "oklch(55% 0.053 277.9)",
+          "oklch(65% 0.053 277.9)",
+          "oklch(80% 0.053 277.9)",
+          "oklch(95% 0.053 277.9)"
+        ]
+      },
+      "primary-on-web": {
+        "role": "neutral",
+        "displayName": "Primary Action Ink",
+        "canonical": "#21192B",
+        "tonalRamp": [
+          "oklch(15% 0.036 304.2)",
+          "oklch(25% 0.036 304.2)",
+          "oklch(35% 0.036 304.2)",
+          "oklch(45% 0.036 304.2)",
+          "oklch(55% 0.036 304.2)",
+          "oklch(65% 0.036 304.2)",
+          "oklch(80% 0.036 304.2)",
+          "oklch(95% 0.036 304.2)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Story-led page headings and the Ludex wordmark."
+      },
+      "headline": {
+        "displayName": "Story Headline",
+        "purpose": "Prominent work titles, often over artwork."
+      },
+      "title": {
+        "displayName": "Section and Work Title",
+        "purpose": "Compact work titles, modal headings, and shelf titles."
+      },
+      "body": {
+        "displayName": "Interface Body",
+        "purpose": "Actions, forms, metadata, and journal reading."
+      },
+      "label": {
+        "displayName": "Action Label",
+        "purpose": "Primary button and compact action text."
+      }
+    },
+    "shadows": [
+      {
+        "name": "cover-depth",
+        "value": "0 8px 22px #09061155",
+        "purpose": "Separates portrait cover art from the surrounding dark field."
+      },
+      {
+        "name": "log-action",
+        "value": "0 6px 18px #0b080f33",
+        "purpose": "A shallow web shadow under the main logging action."
+      },
+      {
+        "name": "dialog-separation",
+        "value": "0 30px 80px #07020c88",
+        "purpose": "Separates an open dialog from its blurred scrim."
+      },
+      {
+        "name": "toast-separation",
+        "value": "0 15px 40px #09030e77",
+        "purpose": "Keeps transient feedback legible above the page."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-lounge",
+        "value": "cubic-bezier(0.23, 1, 0.32, 1)",
+        "purpose": "Web control and overlay easing."
+      },
+      {
+        "name": "control-color",
+        "value": "120ms",
+        "purpose": "Web button color and background feedback."
+      },
+      {
+        "name": "overlay-fade",
+        "value": "160ms",
+        "purpose": "Dialog scrim and toast appearance."
+      },
+      {
+        "name": "dialog-enter",
+        "value": "220ms",
+        "purpose": "Centered web dialog fade and slight scale-in."
+      },
+      {
+        "name": "pressed-nudge",
+        "value": "translateY(1px)",
+        "purpose": "Small web button press feedback; suppressed for reduced motion."
+      },
+      {
+        "name": "web-reduced-motion",
+        "value": "@media (prefers-reduced-motion: reduce) and .reduce-motion",
+        "purpose": "Web removes animations and transitions for the operating-system preference or saved setting."
+      },
+      {
+        "name": "native-reduced-motion",
+        "value": "Stack animation none; React Native Paper animation scale 0",
+        "purpose": "Either the saved preference or the Android operating-system preference disables route and Paper transitions."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "wide-web",
+        "value": "1550px"
+      },
+      {
+        "name": "desktop-rail",
+        "value": "1200px"
+      },
+      {
+        "name": "single-column-web",
+        "value": "1000px"
+      },
+      {
+        "name": "web-mobile",
+        "value": "760px"
+      },
+      {
+        "name": "narrow-web-phone",
+        "value": "380px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Filled violet action used for logging and primary form actions.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Log something</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 41px; padding: 11px 17px; border: 0; border-radius: 7px; background: var(--violet); color: #21192b; font: 600 12px var(--font-sans), sans-serif; cursor: pointer; transition: color 120ms var(--ease), background-color 120ms var(--ease); } .ds-btn-primary:hover:not(:disabled) { background: #c6b3df; } .ds-btn-primary:focus-visible { outline: 2px solid var(--violet); outline-offset: 4px; } .ds-btn-primary:active:not(:disabled) { transform: translateY(1px); } .ds-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Quiet bordered action for profile and secondary tasks.",
+      "html": "<button class=\"ds-btn-secondary\" type=\"button\">Edit showcase</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 41px; padding: 11px 17px; border: 1px solid #44384f; border-radius: 7px; background: var(--raised); color: #d3c4e1; font: 600 12px var(--font-sans), sans-serif; cursor: pointer; transition: color 120ms var(--ease), background-color 120ms var(--ease); } .ds-btn-secondary:hover:not(:disabled) { background: #342b3e; } .ds-btn-secondary:focus-visible { outline: 2px solid var(--violet); outline-offset: 4px; } .ds-btn-secondary:active:not(:disabled) { transform: translateY(1px); } .ds-btn-secondary:disabled { opacity: 0.45; cursor: not-allowed; }"
+    },
+    {
+      "name": "Icon Button",
+      "kind": "button",
+      "refersTo": "icon-button",
+      "description": "Compact icon-only control with a visible hover and keyboard focus state.",
+      "html": "<button class=\"ds-icon-btn\" type=\"button\" aria-label=\"Search Ludex\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" aria-hidden=\"true\"><circle cx=\"10.8\" cy=\"10.8\" r=\"6.8\" stroke=\"currentColor\" stroke-width=\"1.7\"/><path d=\"m16 16 4.2 4.2\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\"/></svg></button>",
+      "css": ".ds-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 0; border-radius: 7px; background: transparent; color: #b0a4bb; cursor: pointer; transition: color 120ms var(--ease), background-color 120ms var(--ease); } .ds-icon-btn:hover { background: var(--raised); color: var(--text); } .ds-icon-btn:focus-visible { outline: 2px solid var(--violet); outline-offset: 4px; } .ds-icon-btn:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Selected Web Navigation Item",
+      "kind": "nav",
+      "description": "Selected destination in the web journal rail; Android uses its separate native tab bar.",
+      "html": "<button class=\"ds-nav-item\" type=\"button\" aria-current=\"page\"><svg width=\"21\" height=\"21\" viewBox=\"0 0 24 24\" fill=\"none\" aria-hidden=\"true\"><path d=\"m3 10.7 9-7.2 9 7.2v9.1a1.2 1.2 0 0 1-1.2 1.2h-5.1v-6.2H9.3V21H4.2A1.2 1.2 0 0 1 3 19.8z\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linejoin=\"round\"/></svg><span>Feed</span><span class=\"ds-nav-dot\" aria-hidden=\"true\"></span></button>",
+      "css": ".ds-nav-item { display: flex; align-items: center; gap: 14px; width: 100%; padding: 13px 15px; border: 0; border-radius: 9px; background: transparent; color: #a79cb5; text-align: left; font: 500 15px var(--font-sans), sans-serif; cursor: pointer; transition: color 120ms var(--ease), background-color 120ms var(--ease); } .ds-nav-item:hover { background: var(--surface); color: var(--text); } .ds-nav-item[aria-current=\"page\"] { background: #282232; color: var(--violet); } .ds-nav-item:focus-visible { outline: 2px solid var(--violet); outline-offset: 4px; } .ds-nav-item:active { transform: translateY(1px); } .ds-nav-dot { width: 4px; height: 4px; margin-left: auto; border-radius: 50%; background: var(--violet); }"
+    },
+    {
+      "name": "Native Media Filter Chip",
+      "kind": "chip",
+      "description": "Portable preview of the React Native Paper media filter; verify chip geometry against the API36 emulator capture; physical-device accessibility remains open.",
+      "html": "<button class=\"ds-chip\" type=\"button\" aria-pressed=\"true\">All media</button>",
+      "css": ".ds-chip { padding: 7px 14px; border: 0; border-radius: 999px; background: var(--ink); color: var(--text); font: 500 14px var(--font-sans), sans-serif; cursor: pointer; transition: color 120ms var(--ease), background-color 120ms var(--ease); } .ds-chip[aria-pressed=\"true\"] { background: var(--raised); color: var(--violet); } .ds-chip:hover { filter: brightness(1.08); } .ds-chip:focus-visible { outline: 2px solid var(--violet); outline-offset: 3px; } .ds-chip:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Search Field",
+      "kind": "input",
+      "description": "Outlined dark search field with a violet focus border and soft ring.",
+      "html": "<label class=\"ds-field\"><span>Find a title</span><input type=\"search\" placeholder=\"Search your journal\" /></label>",
+      "css": ".ds-field { display: flex; flex-direction: column; gap: 7px; padding: 11px 12px; border: 1px solid #4b3659; border-radius: 6px; background: #18111f; color: #d2bddf; font: 12px var(--font-sans), sans-serif; } .ds-field input { width: 100%; padding: 0; border: 0; outline: 0; background: transparent; color: var(--text); font: 13px var(--font-sans), sans-serif; caret-color: var(--violet); } .ds-field input::placeholder { color: #8e759f; } .ds-field:hover { border-color: #4b3659; } .ds-field:focus-within { border-color: var(--violet); box-shadow: 0 0 0 3px #b6a3cf15; } .ds-field:focus-within input:focus-visible { outline: 0; }"
+    },
+    {
+      "name": "Library Cover Tile",
+      "kind": "card",
+      "description": "Portrait artwork tile with a small open affordance revealed on hover; actual artwork comes from the title record.",
+      "html": "<button class=\"ds-cover\" type=\"button\" aria-label=\"Open a title\"><span class=\"ds-cover-art\" aria-hidden=\"true\"></span><span class=\"ds-cover-open\" aria-hidden=\"true\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M7 17 17 7M8 7h9v9\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></span></button>",
+      "css": ".ds-cover { position: relative; display: block; width: 160px; aspect-ratio: 2 / 3; overflow: hidden; padding: 0; border: 0; border-radius: 8px; background: var(--raised); color: var(--text); box-shadow: 0 8px 22px #09061155; cursor: pointer; } .ds-cover-art { position: absolute; inset: 0; background: linear-gradient(160deg, #55485e, #262031 56%, #15121c); } .ds-cover-open { position: absolute; right: 10px; bottom: 10px; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: #181020aa; color: var(--text); opacity: 0; transition: opacity 120ms var(--ease); } .ds-cover:hover .ds-cover-open { opacity: 1; } .ds-cover:focus-visible { outline: 2px solid var(--violet); outline-offset: 4px; } .ds-cover:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Session Spread",
+      "kind": "custom",
+      "description": "Lead feed entry with a panoramic artwork field, lower vignette, story title, then a separate note and rating.",
+      "html": "<article class=\"ds-session\"><button class=\"ds-session-art\" type=\"button\" aria-label=\"Open a story\"><span class=\"ds-session-vignette\" aria-hidden=\"true\"></span><span class=\"ds-session-copy\"><small>FILM JOURNAL</small><strong>Past Lives</strong><span>2023 \u00b7 Drama / Romance</span></span></button><p class=\"ds-session-note\">The silence after the credits stayed with me.</p></article>",
+      "css": ".ds-session { width: 100%; border-bottom: 1px solid var(--line); padding-bottom: 19px; } .ds-session-art { position: relative; display: block; width: 100%; aspect-ratio: 1.91; overflow: hidden; padding: 24px; border: 0; border-radius: 12px; background: #2a2432; color: #f6eee7; text-align: left; cursor: pointer; } .ds-session-vignette { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 20%, #15121c30 45%, #0c0916db 100%); } .ds-session-copy { position: absolute; left: 24px; right: 20px; bottom: 24px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; } .ds-session-copy small { color: #d8bba8; font: 650 8px var(--font-sans), sans-serif; letter-spacing: 2px; } .ds-session-copy strong { font: 400 36px/1.17 var(--font-display), Georgia, serif; letter-spacing: -1px; } .ds-session-copy > span { color: #dfd0d1; font: 11px var(--font-sans), sans-serif; } .ds-session-art:hover { color: #f6eee7; } .ds-session-art:focus-visible { outline: 2px solid var(--violet); outline-offset: 4px; } .ds-session-art:active { transform: translateY(1px); } .ds-session-note { max-width: 48ch; padding: 18px 5px 17px 24px; color: #c7bacc; font: 13px/1.85 var(--font-sans), sans-serif; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Atmospheric Cinema Lounge",
+    "overview": "Ludex gives a personal journal the quiet anticipation of a room before the feature begins. The shared visual world is plum-black, pearl, muted violet, and copper; locally loaded artwork and expressive serif titles provide the spectacle while the journal stays calm enough to scan and use.\n\nFeed, library, and logging are Operate surfaces: action labels stay plain, metadata stays subordinate, and social entries are separated by fine dividers instead of a stack of generic cards. The profile showcase is an Experience surface: featured artwork, mixed-media shelves, and their sequence lead the visit. The website and Android app share the same palette and type voices, but use different platform controls and responsive composition.\n\nWeb screenshots are available at .impeccable/review/desktop.png, .impeccable/review/mobile.png, and .impeccable/review/profile.png. They show the companion website at desktop and web-mobile sizes. Android emulator captures are available at .impeccable/review/phone-android.png, feed-android.png, and profile-android.png. They show the installed internal x86_64 APK on API36, including native tabs, screen insets, Paper controls and loaded artwork. Physical-device, TalkBack and motion/frame performance acceptance remain open.",
+    "keyCharacteristics": [
+      "Story-led, task-clear: artwork opens the experience; operational controls remain direct.",
+      "Quiet dark room: deep plum surfaces, readable pearl text, and restrained accent light.",
+      "Two platform expressions: one design world, web layout and Android system controls."
+    ],
+    "rules": [
+      {
+        "name": "The Velvet-Light Rule",
+        "body": "Keep violet tied to a choice or action, and copper tied to story metadata and brand details. Theme accents may change a showcase's accent; they do not replace the shared base palette.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two-Voice Rule",
+        "body": "Use Fraunces for story identity and section emphasis; use Source Sans 3 for actions, navigation, form labels, and supporting information.",
+        "section": "typography"
+      },
+      {
+        "name": "The Story-First Rule",
+        "body": "Give artwork the large canvas on a lead session or showcase. Keep the reading order, action labels, and progress context visible around it.",
+        "section": "layout"
+      },
+      {
+        "name": "The Quiet-Rail Rule",
+        "body": "Keep feed and library content on the page plane, with dividers doing the structural work. Reserve deeper shadow and blur for artwork or a temporary layer that needs separation.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep violet on active or primary actions and copper on ratings, metadata, and brand accents.",
+      "Do use Fraunces for story-led headings and Source Sans 3 for operational text.",
+      "Do preserve cover and landscape-art proportions, and keep titles legible over artwork with a dark vignette.",
+      "Do separate ordinary feed and library entries with dividers; use depth where artwork or an overlay needs it.",
+      "Do provide a visible keyboard focus treatment and descriptive labels for icon-only actions.",
+      "Do keep sample, empty, error, and spoiler-hidden states visually distinct and readable.",
+      "Do keep web, Android emulator and physical-device evidence distinct; native screenshots verify their captured size only."
+    ],
+    "donts": [
+      "Don't add decorative scroll animation, stagger every feed entry, or insert a startup animation.",
+      "Don't turn routine feed rows into elevated generic cards.",
+      "Don't carry the website's fixed desktop rails or custom bottom bar into Android when native navigation is already implemented.",
+      "Don't shrink action labels or journal notes to the current smallest metadata size.",
+      "Don't infer native reduced-motion behavior or physical performance from static captures; verify those operating-system states separately."
+    ]
+  }
+}

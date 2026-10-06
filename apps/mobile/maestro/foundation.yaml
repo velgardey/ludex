@@ -1,0 +1,20 @@
+# Requires an installed release-like APK and disposable API test accounts.
+# Run with: maestro test -e EMAIL=... -e PASSWORD=... foundation.yaml
+appId: com.ludex.app
+---
+- launchApp:
+    clearState: true
+- tapOn: "Sign in / join"
+- tapOn: "Email"
+- inputText: "${EMAIL}"
+- tapOn: "Password"
+- inputText: "${PASSWORD}"
+- tapOn: "Sign in"
+- tapOn: "Library"
+- assertVisible: "What you return to."
+- tapOn: "Log"
+- assertVisible: "What stayed with you?"
+- tapOn: "Profile"
+- assertVisible: "Preview as a public viewer"
+# Airplane-mode / force-stop / reconnect and two-account policy flows
+# remain required device acceptance steps in android-report.md.

@@ -3,25 +3,46 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --port 3000",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "start": "pnpm dlx serve out -l 3000",
+    "lint": "eslint",
+    "dev:api": "pnpm --filter @ludex/api dev",
+    "test": "pnpm test:domain && pnpm test:api && pnpm test:client && pnpm test:web && pnpm test:mobile",
+    "test:domain": "node --test packages/domain/test/*.test.ts",
+    "test:api": "node --test apps/api/test/*.test.ts",
+    "test:web": "vitest run web/test",
+    "typecheck": "tsc --noEmit && pnpm --filter \"./packages/*\" --filter \"./apps/*\" --if-present typecheck",
+    "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "test:client": "node --test packages/client/test/*.test.ts",
+    "test:mobile": "pnpm --filter @ludex/mobile test --runInBand",
+    "test:e2e": "playwright test",
+    "load:foundation": "node scripts/load-foundation.ts"
   },
   "dependencies": {
     "next": "16.3.8",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "@phosphor-icons/react": "^2.1.10",
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
+    "motion": "^12.23.24",
+    "@ludex/client": "workspace:*",
+    "@ludex/domain": "workspace:*",
+    "@ludex/design": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^26.0.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.8",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.4",
+    "tsx": "^4.20.6",
+    "@playwright/test": "^1.56.0"
   },
   "packageManager": "pnpm@11.24.0"
 }

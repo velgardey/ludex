@@ -1,0 +1,16 @@
+
+Running 9 tests using 1 worker
+
+(node:1195653) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 e2e/account-boundary.spec.ts:58:5 › pending feed cannot cross filters or sign-out (954ms)
+  ✓  2 e2e/account-boundary.spec.ts:102:5 › late authenticated refresh is discarded after sign-out (657ms)
+  ✓  3 e2e/account-boundary.spec.ts:159:5 › sign-out discards an unaccepted feed banner (513ms)
+  ✓  4 e2e/foundation.spec.ts:3:5 › real journal collections, review drafts, public social flow and persistent showcase (4.4s)
+  ✓  5 e2e/friends.spec.ts:2:5 › follows do not grant friend progress; accepted request grants it and block removes it (177ms)
+  ✓  6 e2e/privacy.spec.ts:3:5 › private movie log remains off feed and receipt undo persists (1.4s)
+  ✓  7 e2e/privacy.spec.ts:61:5 › mobile layout and reduced motion preserve usable feed navigation (313ms)
+  ✓  8 e2e/privacy.spec.ts:88:5 › browser export downloads authenticated owner journal (396ms)
+  ✓  9 e2e/save-existing.spec.ts:2:5 › save for later preserves an already completed journal (925ms)
+
+  9 passed (10.5s)

@@ -1,0 +1,73 @@
+{
+  "date": "2026-10-06T14:42:27.980Z",
+  "environment": "disposable local Node HTTP + SQLite, same host; not Azure",
+  "users": 100,
+  "active": 20,
+  "rounds": 3,
+  "foregroundRefresh": "scripted rounds; 30-second real-device polling not measured",
+  "seedMs": 3486.83,
+  "workloadMs": 580.67,
+  "requests": 363,
+  "p50Ms": 22.34,
+  "p95Ms": 64.76,
+  "errors": 0,
+  "responseBytes": 627653,
+  "restartPersistence": true,
+  "endpoints": {
+    "/api/catalog/search": {
+      "requests": 61,
+      "p50Ms": 23.15,
+      "p95Ms": 31.53,
+      "errors": 0,
+      "responseBytes": 228691
+    },
+    "/api/social/follow": {
+      "requests": 60,
+      "p50Ms": 23.15,
+      "p95Ms": 145.39,
+      "errors": 0,
+      "responseBytes": 120
+    },
+    "/api/library": {
+      "requests": 61,
+      "p50Ms": 22.27,
+      "p95Ms": 29.94,
+      "errors": 0,
+      "responseBytes": 19343
+    },
+    "/api/progress": {
+      "requests": 60,
+      "p50Ms": 22.34,
+      "p95Ms": 31.67,
+      "errors": 0,
+      "responseBytes": 8340
+    },
+    "/api/feed": {
+      "requests": 60,
+      "p50Ms": 23.1,
+      "p95Ms": 29.73,
+      "errors": 0,
+      "responseBytes": 365577
+    },
+    "/api/showcase": {
+      "requests": 60,
+      "p50Ms": 21.92,
+      "p95Ms": 31.59,
+      "errors": 0,
+      "responseBytes": 5460
+    },
+    "/api/auth/me": {
+      "requests": 1,
+      "p50Ms": 1.66,
+      "p95Ms": 1.66,
+      "errors": 0,
+      "responseBytes": 122
+    }
+  },
+  "cloudRU": "unmeasured",
+  "cloudColdStarts": "unmeasured",
+  "crossRegion": "unmeasured",
+  "outboxLag": "immediate local drain, not a cloud lag measurement",
+  "cost": "unmeasured",
+  "deviceInteraction": "unmeasured"
+}

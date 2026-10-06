@@ -1,0 +1,23 @@
+{
+  "name": "@ludex/api",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.ts",
+    "start": "node src/server.ts",
+    "test": "node --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "build:functions": "tsc -p tsconfig.functions.json",
+    "lint": "eslint --max-warnings 0 ."
+  },
+  "dependencies": {
+    "@ludex/domain": "workspace:*",
+    "@ludex/contracts": "workspace:*",
+    "@azure/functions": "^4.9.0",
+    "@azure/cosmos": "^4.7.0",
+    "jose": "^6.1.1",
+    "zod": "^4.1.12"
+  },
+  "main": "dist/apps/api/src/functions/index.js"
+}

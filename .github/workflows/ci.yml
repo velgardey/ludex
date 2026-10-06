@@ -1,0 +1,19 @@
+name: Foundation contracts and builds
+on: [push, pull_request]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.24.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm verify
+      - run: pnpm --filter @ludex/mobile lint
+      - run: pnpm --filter @ludex/api build:functions
+      - run: pnpm --filter @ludex/mobile export

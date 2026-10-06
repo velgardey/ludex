@@ -1,0 +1,38 @@
+✔ invited signup makes real empty account and hashed credentials; session persists and revoked token denied (102.857906ms)
+✔ OIDC rejects unsigned and misconfigured tokens without accepting local passwords (2.585639ms)
+✔ OIDC verifies RS256 issuer audience expiry and invited subject binding using a local JWKS (122.531265ms)
+✔ HTTP authenticates principals, enforces CORS/body validation and starts with empty real account (93.486298ms)
+✔ OIDC invitation binding reserves cohort slot once and never accepts client roles (4.43817ms)
+✔ SQLite durable transactions roll back, enforce scope and compare ETags (11.614949ms)
+✔ progress retries exactly once, changed receipt payload rejects and stale edit conflicts (99.606795ms)
+✔ private logs have no social projection and correction immediately retracts public activity (81.342717ms)
+✔ follows grant public only, friendship accept grants friends, block overrides both directions (74.409869ms)
+✔ spoiler text omitted from JSON until all episode requirements watched (72.862037ms)
+✔ showcase private shelves omitted; owner version checked; deletion cuts sessions and visibility immediately (74.19879ms)
+✔ social showcase and collection retries preserve exact receipt in their transaction (74.031483ms)
+✔ hidden title/art and blocked reply bodies absent from JSON (75.498483ms)
+✔ circles require owner membership and review edits retract immediately (74.085606ms)
+✔ historical observations remain quiet and current audience prevents publication retry (77.023812ms)
+✔ publication drain skips completed receipts rather than starving after first page (106.436578ms)
+✔ expired owner export is unavailable and excludes third-party private records (73.842094ms)
+✔ policy changes invalidate cursor and pages have no duplicate boundary (75.40197ms)
+✔ spoiler scopes reject empty requirements and mismatched title bindings (72.02959ms)
+✔ account deletion denies a previously authenticated principal writing any new data (69.929771ms)
+✔ conflicted deletion remains queued until confirmed cleanup retry (73.018433ms)
+✔ concurrent identical corrections return identical accepted receipts (72.104832ms)
+✔ expired exports are removed and re-export keeps one active snapshot (70.890291ms)
+✔ deletion tombstone defeats an already in-flight progress transaction (69.424563ms)
+✔ deletion guard conflict leaves recoverable queued job and worker closes it before cleanup (73.604173ms)
+✔ default browser fetch keeps its required global receiver (44.654667ms)
+✔ command conflicts return the typed receipt so durable outbox stops retrying (2.970609ms)
+✔ TV gaps and skipped episodes do not reveal required spoilers (1.803538ms)
+✔ ratings optional and integer ten point only (0.532359ms)
+✔ game story completion does not manufacture achievements; rewatches retain runs (1.524038ms)
+ℹ tests 30
+ℹ suites 0
+ℹ pass 30
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1816.43835

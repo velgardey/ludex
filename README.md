@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Ludex
 
-## Getting Started
+An Android-first journal for films, television and games, with a cinematic social feed and configurable showcases. Stage A is a runnable local foundation. Azure deployment and signed-device release acceptance remain separate gates; see `docs/validation/foundation-release.md`.
 
-First, run the development server:
+## Run locally
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Use Node 26 and pnpm (the lockfile records exact versions).
+
+```sh
+pnpm install
+pnpm dev:api
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+In a second terminal:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```sh
+pnpm dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open http://localhost:3000. The signed-out sample journal is explicitly labeled. New accounts start empty. Local invitation: `LUDEX-LOCAL-BETA`; signup password minimum 12 characters. Local SQLite lives under `.local/` and is ignored by Git. Local password authentication is disabled in cloud mode.
 
-## Learn More
+For the Android client:
 
-To learn more about Next.js, take a look at the following resources:
+```sh
+pnpm --filter @ludex/mobile start
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Set `EXPO_PUBLIC_API_URL` to a reachable API origin (emulator `http://10.0.2.2:4000/api`; a phone needs a reachable host or HTTPS cloud endpoint). Follow `apps/mobile/README.md` for platform validation and native build notes. Stage A has no active cloud AI or automatic source connectors.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Verify
 
-## Deploy on Vercel
+```sh
+pnpm verify
+pnpm --filter @ludex/mobile lint
+pnpm test:e2e
+pnpm load:foundation --users 100 --active 20 --rounds 3
+pnpm --filter @ludex/api build:functions
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Browser tests expect the API and website running. Static-output verification instructions are in `scripts/README.md`. They create two local disposable accounts and delete them after the flow. The load tool creates and removes its own temporary SQLite database and never writes the current journal.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Production website output is static (`out/`). `pnpm start` serves that output; a separately deployed API must be configured through `NEXT_PUBLIC_API_URL` at build time. No private data is embedded in the static build. See `docs/operations/runbook.md`, `PRODUCT.md`, and `DESIGN.md` for the scope and operating requirements.
+
+Internal Android preview APKs are available under `apps/mobile/artifacts/`: the x86_64 build is installed/tested in the emulator, and the ARM64 build supports a USB-connected phone through `adb reverse`. Both use a development certificate. See `apps/mobile/README.md` for the exact setup.
