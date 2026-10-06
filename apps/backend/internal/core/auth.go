@@ -359,12 +359,27 @@ func (a *App) googleCallback(w http.ResponseWriter, r *http.Request) error {
 		return unauthorized("google-signin-cancelled")
 	}
 	state := r.URL.Query().Get("state")
-	cookie, err := r.Cookie("ludex_oauth_state")
-	if err != nil || state == "" || !sameSecret(state, cookie.Value) {
+	if state == "" {
 		return unauthorized("invalid-oauth-state")
 	}
-	var nonce, verifier, inviteHash, redirectURI string
-	err = a.db.QueryRow(r.Context(), `DELETE FROM oauth_states WHERE state_hash=$1 AND client_kind='web' AND expires_at>now() RETURNING nonce,code_verifier,COALESCE(encode(invite_code_hash,'hex'),''),redirect_uri`, tokenHash(state)).Scan(&nonce, &verifier, &inviteHash, &redirectURI)
+	var observedKind string
+	err := a.db.QueryRow(r.Context(), `SELECT client_kind FROM oauth_states WHERE state_hash=$1 AND expires_at>now()`, tokenHash(state)).Scan(&observedKind)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return unauthorized("oauth-state-expired")
+	}
+	if err != nil {
+		return fmt.Errorf("read oauth state: %w", err)
+	}
+	if observedKind == "web" {
+		cookie, cookieErr := r.Cookie("ludex_oauth_state")
+		if cookieErr != nil || !sameSecret(state, cookie.Value) {
+			return unauthorized("invalid-oauth-state")
+		}
+	} else if observedKind != "native-browser" {
+		return unauthorized("invalid-oauth-state")
+	}
+	var nonce, verifier, inviteHash, redirectURI, clientKind, appChallenge string
+	err = a.db.QueryRow(r.Context(), `DELETE FROM oauth_states WHERE state_hash=$1 AND client_kind=$2 AND expires_at>now() RETURNING nonce,code_verifier,COALESCE(encode(invite_code_hash,'hex'),''),redirect_uri,client_kind,COALESCE(app_code_challenge,'')`, tokenHash(state), observedKind).Scan(&nonce, &verifier, &inviteHash, &redirectURI, &clientKind, &appChallenge)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return unauthorized("oauth-state-expired")
 	}
@@ -398,6 +413,17 @@ func (a *App) googleCallback(w http.ResponseWriter, r *http.Request) error {
 			return forbidden("invitation-required")
 		}
 		inviteCode = a.cfg.InviteCode
+	}
+	if clientKind == "native-browser" {
+		if !validS256Challenge(appChallenge) {
+			return unauthorized("invalid-oauth-state")
+		}
+		handoff, err := a.createNativeBrowserHandoff(r.Context(), claims, inviteCode, appChallenge)
+		if err != nil {
+			return err
+		}
+		http.Redirect(w, r, nativeHandoffURL(handoff, state), http.StatusSeeOther)
+		return nil
 	}
 	session, err := a.googleSession(r.Context(), claims, inviteCode)
 	if err != nil {
@@ -435,22 +461,37 @@ func (a *App) googleSession(ctx context.Context, claims googleClaims, inviteCode
 	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(7482415)`); err != nil {
 		return Session{}, fmt.Errorf("lock signup cohort: %w", err)
 	}
+	user, err := a.googleUserTx(ctx, tx, claims, inviteCode)
+	if err != nil {
+		return Session{}, err
+	}
+	session, err := a.createSessionTx(ctx, tx, user, "native")
+	if err != nil {
+		return Session{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Session{}, fmt.Errorf("commit google session: %w", err)
+	}
+	return session, nil
+}
+
+func (a *App) googleUserTx(ctx context.Context, tx pgx.Tx, claims googleClaims, inviteCode string) (User, error) {
 	var user User
-	err = tx.QueryRow(ctx, `SELECT u.id::text,u.display_name,COALESCE(u.email,''),u.roles,u.bio FROM google_identities g JOIN users u ON u.id=g.user_id WHERE g.issuer=$1 AND g.subject=$2 AND NOT u.disabled FOR UPDATE OF u`, claims.Issuer, claims.Subject).Scan(&user.ID, &user.DisplayName, &user.Email, &user.Roles, &user.Bio)
+	err := tx.QueryRow(ctx, `SELECT u.id::text,u.display_name,COALESCE(u.email,''),u.roles,u.bio FROM google_identities g JOIN users u ON u.id=g.user_id WHERE g.issuer=$1 AND g.subject=$2 AND NOT u.disabled FOR UPDATE OF u`, claims.Issuer, claims.Subject).Scan(&user.ID, &user.DisplayName, &user.Email, &user.Roles, &user.Bio)
 	if errors.Is(err, pgx.ErrNoRows) {
 		if a.cfg.InviteCode == "" || !sameSecret(inviteCode, a.cfg.InviteCode) {
-			return Session{}, forbidden("invitation-required")
+			return User{}, forbidden("invitation-required")
 		}
 		var count int
 		if err := tx.QueryRow(ctx, `SELECT count(*) FROM users`).Scan(&count); err != nil {
-			return Session{}, fmt.Errorf("count accounts: %w", err)
+			return User{}, fmt.Errorf("count accounts: %w", err)
 		}
 		maxAccounts := a.cfg.MaxAccounts
 		if maxAccounts <= 0 {
 			maxAccounts = 100
 		}
 		if count >= maxAccounts {
-			return Session{}, forbidden("cohort-full")
+			return User{}, forbidden("cohort-full")
 		}
 		name := strings.TrimSpace(claims.Name)
 		if name == "" {
@@ -463,28 +504,21 @@ func (a *App) googleSession(ctx context.Context, claims googleClaims, inviteCode
 		}
 		user = User{ID: id, DisplayName: name, Email: email, Roles: a.rolesForEmail(email)}
 		if _, err := tx.Exec(ctx, `INSERT INTO users(id,display_name,email,roles) VALUES($1,$2,$3,$4)`, id, name, nullString(email), user.Roles); err != nil {
-			return Session{}, fmt.Errorf("insert google user: %w", err)
+			return User{}, fmt.Errorf("insert google user: %w", err)
 		}
 		if _, err := tx.Exec(ctx, `INSERT INTO google_identities(issuer,subject,user_id,email,email_verified) VALUES($1,$2,$3,$4,$5)`, claims.Issuer, claims.Subject, id, nullString(email), claims.EmailVerified); err != nil {
-			return Session{}, fmt.Errorf("insert google identity: %w", err)
+			return User{}, fmt.Errorf("insert google identity: %w", err)
 		}
 		if _, err := tx.Exec(ctx, `INSERT INTO account_settings(user_id) VALUES($1)`, id); err != nil {
-			return Session{}, fmt.Errorf("insert settings: %w", err)
+			return User{}, fmt.Errorf("insert settings: %w", err)
 		}
 		if _, err := tx.Exec(ctx, `INSERT INTO showcases(user_id) VALUES($1)`, id); err != nil {
-			return Session{}, fmt.Errorf("insert showcase: %w", err)
+			return User{}, fmt.Errorf("insert showcase: %w", err)
 		}
 	} else if err != nil {
-		return Session{}, fmt.Errorf("find google identity: %w", err)
+		return User{}, fmt.Errorf("find google identity: %w", err)
 	}
-	session, err := a.createSessionTx(ctx, tx, user, "native")
-	if err != nil {
-		return Session{}, err
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return Session{}, fmt.Errorf("commit google session: %w", err)
-	}
-	return session, nil
+	return user, nil
 }
 
 func (a *App) verifyGoogleIDToken(ctx context.Context, value, audience, nonce string) (googleClaims, error) {

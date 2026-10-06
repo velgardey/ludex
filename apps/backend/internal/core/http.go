@@ -115,6 +115,33 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		respond(w, result, err)
 		return
 	}
+	if path == "/auth/google/native/start" {
+		var input nativeGoogleStartInput
+		if err := decodeBody(body, &input); err != nil {
+			writeProblem(w, err)
+			return
+		}
+		result, err := a.startNativeBrowserGoogle(r.Context(), r, input)
+		respond(w, result, err)
+		return
+	}
+	if path == "/auth/google/native/exchange" {
+		var input struct {
+			Code         string `json:"code"`
+			CodeVerifier string `json:"codeVerifier"`
+		}
+		if err := decodeBody(body, &input); err != nil {
+			writeProblem(w, err)
+			return
+		}
+		if err := a.applyNativeRateLimit(r.Context(), r, "exchange"); err != nil {
+			respond(w, nil, err)
+			return
+		}
+		result, err := a.exchangeNativeBrowserHandoff(r.Context(), input.Code, input.CodeVerifier)
+		respond(w, result, err)
+		return
+	}
 	if path == "/auth/google/native" {
 		var input struct {
 			IDToken     string `json:"idToken"`
@@ -174,6 +201,9 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, unauthorized("authentication-required"))
 		return
 	}
+	if path == "/account/download" {
+		w.Header().Set("Content-Disposition", `attachment; filename="ludex-export.json"`)
+	}
 	result, err := a.handleCoreRoute(r.Context(), r, path, principal, body)
 	respond(w, result, err)
 }
@@ -195,14 +225,14 @@ func knownRoute(path, method string) bool {
 	switch key {
 	case "GET /health", "GET /preview", "GET /auth/config", "GET /catalog/search", "GET /catalog/title",
 		"POST /auth/signup", "POST /auth/login", "POST /auth/logout", "GET /auth/me",
-		"GET /auth/google/start", "POST /auth/google/start", "GET /auth/google/callback", "GET /auth/google/native/challenge", "POST /auth/google/native",
+		"GET /auth/google/start", "POST /auth/google/start", "GET /auth/google/callback", "GET /auth/google/native/challenge", "POST /auth/google/native", "POST /auth/google/native/start", "POST /auth/google/native/exchange",
 		"GET /library", "POST /progress", "POST /library/edit", "POST /progress/correct",
 		"GET /feed", "GET /activity", "GET /social/users", "GET /social/status", "POST /social/follow", "POST /social/friendship",
 		"GET /showcase", "POST /showcase", "GET /collection", "POST /collection", "GET /collections",
 		"GET /social/review/drafts", "POST /social/review/draft", "POST /social/review/publish", "POST /social/review/edit",
 		"GET /social/replies", "POST /social/reply", "POST /social/reply/edit", "POST /social/react", "POST /social/block",
 		"POST /social/report", "GET /moderation", "POST /moderation", "GET /social/circles", "POST /social/circles",
-		"GET /account/settings", "POST /account/settings", "POST /account/export", "POST /account/delete":
+		"GET /account/settings", "POST /account/settings", "POST /account/export", "GET /account/download", "POST /account/delete":
 		return true
 	default:
 		return false
@@ -517,8 +547,18 @@ func (a *App) handleCoreRoute(ctx context.Context, r *http.Request, path string,
 			return nil, err
 		}
 		return a.saveSettings(ctx, principal, input)
-	case "/account/export", "/account/delete":
-		return nil, problem(http.StatusNotImplemented, "account-job-not-implemented")
+	case "/account/export":
+		if r.Method == http.MethodPost {
+			return a.createAccountExport(ctx, principal, r)
+		}
+	case "/account/download":
+		if r.Method == http.MethodGet {
+			return a.downloadAccountExport(ctx, principal, r.URL.Query().Get("id"))
+		}
+	case "/account/delete":
+		if r.Method == http.MethodPost {
+			return a.deleteAccount(ctx, principal)
+		}
 	case "/auth/logout", "/auth/me":
 		return nil, notFound("route-not-found")
 	}

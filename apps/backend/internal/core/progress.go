@@ -42,24 +42,24 @@ func (a *App) loadLibrary(ctx context.Context, userID string) ([]LibraryItem, er
 		}
 		item.Runs = make([]Run, 0)
 		item.AchievementIDs = make([]string, 0)
-		runs, err := a.readRuns(ctx, userID, item.TitleID)
-		if err != nil {
-			rows.Close()
-			return nil, err
-		}
-		item.Runs = runs
-		achievements, err := a.readAchievements(ctx, userID, item.TitleID)
-		if err != nil {
-			rows.Close()
-			return nil, err
-		}
-		item.AchievementIDs = achievements
 		items = append(items, item)
 	}
 	err = rows.Err()
 	rows.Close()
 	if err != nil {
 		return nil, fmt.Errorf("iterate library: %w", err)
+	}
+	for i := range items {
+		runs, err := a.readRuns(ctx, userID, items[i].TitleID)
+		if err != nil {
+			return nil, err
+		}
+		items[i].Runs = runs
+		achievements, err := a.readAchievements(ctx, userID, items[i].TitleID)
+		if err != nil {
+			return nil, err
+		}
+		items[i].AchievementIDs = achievements
 	}
 	return items, nil
 }
@@ -74,8 +74,12 @@ func (a *App) readRuns(ctx context.Context, userID, titleID string) ([]Run, erro
 	for rows.Next() {
 		var run Run
 		var playedOn *time.Time
-		if err := rows.Scan(&run.ID, &run.MovieViewed, &run.StoryCompleted, &run.Minutes, &run.SessionActive, &playedOn, &run.Emulator); err != nil {
+		var emulator *string
+		if err := rows.Scan(&run.ID, &run.MovieViewed, &run.StoryCompleted, &run.Minutes, &run.SessionActive, &playedOn, &emulator); err != nil {
 			return nil, fmt.Errorf("scan run: %w", err)
+		}
+		if emulator != nil {
+			run.Emulator = *emulator
 		}
 		if playedOn != nil {
 			run.PlayedOn = playedOn.Format("2006-01-02")
@@ -83,6 +87,14 @@ func (a *App) readRuns(ctx context.Context, userID, titleID string) ([]Run, erro
 		run.WatchedEpisodeIDs = make([]string, 0)
 		run.SkippedEpisodeIDs = make([]string, 0)
 		run.MilestoneIDs = make([]string, 0)
+		result = append(result, run)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate runs: %w", err)
+	}
+	rows.Close()
+	for i := range result {
+		run := &result[i]
 		progress, err := a.db.Query(ctx, `SELECT episode_id,status FROM run_episode_progress WHERE user_id=$1 AND title_id=$2 AND run_id=$3 ORDER BY episode_id`, userID, titleID, run.ID)
 		if err != nil {
 			return nil, fmt.Errorf("read episode progress: %w", err)
@@ -121,10 +133,6 @@ func (a *App) readRuns(ctx context.Context, userID, titleID string) ([]Run, erro
 		if milestoneErr != nil {
 			return nil, fmt.Errorf("iterate milestones: %w", milestoneErr)
 		}
-		result = append(result, run)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate runs: %w", err)
 	}
 	return result, nil
 }

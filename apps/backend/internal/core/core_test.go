@@ -452,6 +452,10 @@ func cloneMap(input map[string]any) map[string]any {
 }
 
 func testDatabase(t *testing.T) *pgxpool.Pool {
+	return testDatabaseWithMaxConnections(t, 0)
+}
+
+func testDatabaseWithMaxConnections(t *testing.T, maxConnections int32) *pgxpool.Pool {
 	t.Helper()
 	url := os.Getenv("LUDEX_TEST_DATABASE_URL")
 	if url == "" {
@@ -474,25 +478,30 @@ func testDatabase(t *testing.T) *pgxpool.Pool {
 	}
 	cfg.ConnConfig.RuntimeParams["search_path"] = schema
 	cfg.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeExec
+	if maxConnections > 0 {
+		cfg.MaxConns = maxConnections
+	}
 	pool, err := pgxpool.NewWithConfig(t.Context(), cfg)
 	if err != nil {
 		_, _ = admin.Exec(t.Context(), `DROP SCHEMA "`+schema+`" CASCADE`)
 		admin.Close()
 		t.Fatalf("connect integration database: %v", err)
 	}
-	path := filepath.Join("..", "..", "db", "migrations", "001_core.sql")
-	migration, err := os.ReadFile(path)
-	if err != nil {
-		pool.Close()
-		_, _ = admin.Exec(t.Context(), `DROP SCHEMA "`+schema+`" CASCADE`)
-		admin.Close()
-		t.Fatalf("read migration %s: %v", path, err)
-	}
-	if _, err := pool.Exec(t.Context(), string(migration)); err != nil {
-		pool.Close()
-		_, _ = admin.Exec(t.Context(), `DROP SCHEMA "`+schema+`" CASCADE`)
-		admin.Close()
-		t.Fatalf("apply core migration: %v", err)
+	for _, name := range []string{"001_core.sql", "002_companion.sql", "003_connections.sql", "004_core_native.sql"} {
+		path := filepath.Join("..", "..", "db", "migrations", name)
+		migration, err := os.ReadFile(path)
+		if err != nil {
+			pool.Close()
+			_, _ = admin.Exec(t.Context(), `DROP SCHEMA "`+schema+`" CASCADE`)
+			admin.Close()
+			t.Fatalf("read migration %s: %v", path, err)
+		}
+		if _, err := pool.Exec(t.Context(), string(migration)); err != nil {
+			pool.Close()
+			_, _ = admin.Exec(t.Context(), `DROP SCHEMA "`+schema+`" CASCADE`)
+			admin.Close()
+			t.Fatalf("apply migration %s: %v", name, err)
+		}
 	}
 	t.Cleanup(func() {
 		pool.Close()

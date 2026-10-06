@@ -16,6 +16,20 @@ type LibraryEditCommand struct {
 	Patch       map[string]json.RawMessage `json:"patch"`
 }
 
+// ApplyLibrary uses the same versioned edit path as the authenticated HTTP
+// route. Callers must pass a previously authenticated Ludex user ID.
+func (a *App) ApplyLibrary(ctx context.Context, userID string, raw json.RawMessage) (json.RawMessage, error) {
+	var command LibraryEditCommand
+	if err := json.Unmarshal(raw, &command); err != nil {
+		return nil, badRequest("invalid-library-edit")
+	}
+	result, err := a.editLibrary(ctx, Principal{UserID: userID}, command)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(result)
+}
+
 type libraryPatchValues struct {
 	State       *string
 	RatingSet   bool
