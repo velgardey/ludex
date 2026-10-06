@@ -8,7 +8,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { PaperProvider, Snackbar } from "react-native-paper";
 import { LudexProvider, useLudex } from "../state";
-import { colors, theme } from "../theme";
+import { colors, fontFaces, theme } from "../theme";
 function Routes() {
   const { notice, setNotice, reducedMotion } = useLudex();
   return (
@@ -17,6 +17,10 @@ function Routes() {
         screenOptions={{
           headerStyle: { backgroundColor: colors.ink },
           headerTintColor: colors.pearl,
+          headerTitleStyle: {
+            fontFamily: fontFaces.semibold,
+            fontWeight: "normal",
+          },
           contentStyle: { backgroundColor: colors.ink },
           animation: reducedMotion ? "none" : "default",
         }}
@@ -81,8 +85,11 @@ function MotionTheme({ children }: { children: React.ReactNode }) {
 }
 export default function RootLayout() {
   const [fontsReady, fontError] = useFonts({
-    Fraunces: require("../../assets/fonts/Fraunces.ttf"),
-    SourceSans3: require("../../assets/fonts/SourceSans3.ttf"),
+    LudexSoraRegular: require("../../assets/fonts/Sora-Regular.ttf"),
+    LudexSoraMedium: require("../../assets/fonts/Sora-Medium.ttf"),
+    LudexSoraSemiBold: require("../../assets/fonts/Sora-SemiBold.ttf"),
+    LudexSoraBold: require("../../assets/fonts/Sora-Bold.ttf"),
+    LudexSoraExtraBold: require("../../assets/fonts/Sora-ExtraBold.ttf"),
   });
   if (!fontsReady && !fontError)
     return (

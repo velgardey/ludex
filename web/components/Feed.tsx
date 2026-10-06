@@ -155,8 +155,7 @@ export function Feed({
             )}
             {spread && (
               <div className="spread-note">
-                <span className="quote-mark">“</span>
-                <p>{a.note ?? "Another story that stays with you."}</p>
+                {a.note && <p>{a.note}</p>}
                 {a.rating && (
                   <span className="rating">
                     <Star size={14} weight="fill" />

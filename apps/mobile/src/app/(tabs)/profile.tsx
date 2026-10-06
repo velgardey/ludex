@@ -26,10 +26,10 @@ export default function Profile() {
         <>
           <View style={[styles.row, profileStyles.previewToggle]}>
             <View style={{ flex: 1 }}>
-              <Text variant="titleSmall" style={{ fontWeight: "700" }}>
+              <Text variant="titleSmall">
                 Preview as a public viewer
               </Text>
-              <Text style={styles.metadata}>Check what others can see</Text>
+              <Text style={[styles.metadata, { textAlign: "center" }]}>Check what others can see</Text>
             </View>
             <Switch
               value={viewer}
@@ -40,7 +40,7 @@ export default function Profile() {
           <ProfileView
             showcase={showcase}
             catalog={catalog}
-            name={session?.user.displayName ?? "The sample lounge"}
+            name={session?.user.displayName ?? "Sample archive"}
             owner={!!session && !viewer}
             viewer={viewer}
           />
@@ -93,19 +93,20 @@ export default function Profile() {
 
 const profileStyles = {
   previewToggle: {
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     marginBottom: 20,
-    borderRadius: 17,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: colors.outline,
     backgroundColor: colors.surface,
   },
   collectionButton: {
     marginBottom: 9,
-    borderRadius: 15,
+    alignSelf: "stretch" as const,
+    borderRadius: 6,
     borderColor: colors.outline,
   },
-  createButton: { alignSelf: "flex-start" as const, marginTop: 12, borderRadius: 15 },
-  settingsButton: { alignSelf: "flex-start" as const, marginTop: 13 },
+  createButton: { alignSelf: "stretch" as const, marginTop: 12, borderRadius: 6 },
+  settingsButton: { alignSelf: "center" as const, marginTop: 13 },
 };

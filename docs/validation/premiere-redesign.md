@@ -1,3 +1,5 @@
+> Historical report for the preceding Premiere commit. The Sora font correction and current design evidence are in [after-hours-refinement.md](after-hours-refinement.md).
+
 # Midnight Premiere redesign — 2026-10-06
 
 The user authorized a bold, highly animated replacement of the muted lounge visual world and explicitly requested Sunburst images. The redesign is implemented in the isolated `codex/ludex-stage-a` worktree. It preserves Stage A's local account, manual progress, social, privacy, shelf and offline contracts. No cloud deployment or automatic provider connection is established by this work.

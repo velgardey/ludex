@@ -82,7 +82,7 @@ export default function Review() {
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={[styles.content, { paddingTop: 24 }]}
     >
-      <Heading eyebrow="Review" title={title?.title ?? "Your thoughts"} />
+      <Heading context="Review" title={title?.title ?? "Your thoughts"} />
       <Text style={[styles.metadata, { marginBottom: 20 }]}>
         Drafts stay private. Publish is a separate, explicit public action.
       </Text>

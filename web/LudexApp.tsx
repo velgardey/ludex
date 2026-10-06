@@ -323,7 +323,7 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
       <aside className="sidebar">
         <Link href="/" className="brand" aria-label="Ludex home">
           ludex
-          <Sparkle size={19} weight="fill" />
+          <FilmSlate size={24} weight="fill" />
         </Link>
         <div className="sidebar-rule" />
         <nav aria-label="Main navigation">
@@ -349,12 +349,8 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
           <span className="lounge-symbol">
             <FilmSlate size={25} />
           </span>
-          <p>
-            Life is better
-            <br />
-            with a good story.
-          </p>
-          <span>A place for yours.</span>
+          <p>After hours,<br />together.</p>
+          <span>Films. Series. Games.</span>
         </div>
         <button className="assistant-entry" onClick={() => setCompanion(true)}>
           <Sparkle size={18} />
@@ -386,7 +382,7 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
         <header className="topbar">
           <div className="mobile-brand">
             ludex
-            <Sparkle size={15} weight="fill" />
+            <FilmSlate size={19} weight="fill" />
           </div>
           <div className="breadcrumbs">
             {page === "feed"
@@ -842,7 +838,7 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
             )}
             <footer className="journal-footer">
               <span>ludex</span>
-              <p>A little less scrolling. A little more story.</p>
+              <p>Your film, series and game journal.</p>
               <small>
                 Invited beta · Films, series & games ·{" "}
                 <Link href="/privacy/">Privacy</Link>
@@ -852,8 +848,8 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
           {page !== "profile" && (
             <aside className="right-rail">
               <div className="rail-heading">
-                <h2>In the middle of a story</h2>
-                <span>A little unfinished is good.</span>
+                <h2>In progress</h2>
+                <span>{session ? "From your library" : "Sample library"}</span>
               </div>
               {railWorks.length ? (
                 railWorks.map((t) => (
@@ -874,9 +870,7 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
                       </span>
                       <h3>{t.title}</h3>
                       <p>
-                        {t.media === "game"
-                          ? "A world worth returning to"
-                          : "One more episode, maybe."}
+                        {t.year} · {t.genres?.slice(0, 2).join(" / ") ?? t.media}
                       </p>
                       <span className="continue-text">
                         Continue your journal <ArrowRight size={13} />
@@ -932,12 +926,10 @@ export function LudexApp({ initialPage = "feed" }: { initialPage?: Page }) {
               >
                 <FilmSlate size={23} />
                 <h3>
-                  Good stories
-                  <br />
-                  bring us together.
+                  Find your people.
                 </h3>
                 <p>
-                  Your next favorite might be someone else’s forever favorite.
+                  Explore their showcases. Compare notes. Start a conversation.
                 </p>
                 <button onClick={() => go("discover")}>
                   Find your people <ArrowUpRight size={14} />

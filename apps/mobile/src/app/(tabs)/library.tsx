@@ -54,20 +54,21 @@ export default function Library() {
     <View style={{ flex: 1 }}>
       <Page title="Library" refresh={() => refresh()}>
         <Heading
-          eyebrow="Your archive, at your pace"
+          context="Your archive, at your pace"
           title="What you return to."
         />
         <Searchbar
           placeholder="Search your journal"
           value={query}
           onChangeText={setQuery}
-          style={{ marginBottom: 18 }}
+          style={{ marginBottom: 16, borderRadius: 7, backgroundColor: colors.surface }}
         />
         <MediaFilters value={media} onChange={setMedia} />
         <View
           style={{
             flexDirection: "row",
             flexWrap: "wrap",
+            justifyContent: "center",
             gap: 8,
             marginBottom: 18,
           }}
@@ -105,9 +106,9 @@ export default function Library() {
         {pending.length ? (
           <View
             style={{
-              padding: 16,
+              padding: 14,
               backgroundColor: colors.surface,
-              borderRadius: 12,
+              borderRadius: 6,
               marginBottom: 24,
             }}
           >

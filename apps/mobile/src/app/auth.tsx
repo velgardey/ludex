@@ -38,7 +38,7 @@ export default function Auth() {
       contentContainerStyle={[styles.content, { paddingTop: 32 }]}
     >
       <Heading
-        eyebrow="Your own corner of the lounge"
+        context="For every story you want to keep."
         title="Remember what moves you."
       />
       <Text variant="bodyLarge" style={{ marginBottom: 24 }}>

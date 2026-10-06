@@ -51,7 +51,7 @@ export function Profile({
         <div className="profile-vignette" />
         <div className="profile-cinema-caption">
           <BookmarkSimple size={17} />
-          <span>A collection of things that stay.</span>
+          <span>{featured.title || "Your featured story"}</span>
         </div>
       </div>
       <div className="profile-header">
@@ -115,9 +115,9 @@ export function Profile({
       </div>
       <div className="profile-journal-heading">
         <h2>The personal program</h2>
-        <p>Curated, never completed.</p>
+        <p>Films, series and games, arranged by you.</p>
       </div>
-      {showcase?.shelves.map((shelf, index) => (
+      {showcase?.shelves.map((shelf) => (
         <section className="profile-shelf" key={shelf.id}>
           <div className="shelf-heading">
             <div>
@@ -143,11 +143,7 @@ export function Profile({
                     <button onClick={() => onTitle(t)} key={id}>
                       <Artwork title={t} backdrop />
                       <span>
-                        <small>
-                          {t.media === "game"
-                            ? "A WORLD TO GET LOST IN"
-                            : "A STORY TO RETURN TO"}
-                        </small>
+                        <small>{t.media === "game" ? "Game" : t.media === "show" ? "Series" : "Film"} · {t.year}</small>
                         <strong>{t.title}</strong>
                         <ArrowUpRight size={20} />
                       </span>
@@ -170,11 +166,6 @@ export function Profile({
                   )
                 );
               })}
-            </div>
-          )}
-          {index === 0 && (
-            <div className="shelf-annotation">
-              Some favorites don’t need an explanation.
             </div>
           )}
         </section>

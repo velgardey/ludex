@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { router } from "expo-router";
 import { Searchbar, Text, Button, Avatar } from "react-native-paper";
 import type { User } from "@ludex/domain";
-import { colors } from "../../theme";
+import { colors, font } from "../../theme";
 import { useLudex } from "../../state";
 import {
   Page,
@@ -37,17 +37,23 @@ export default function Discover() {
   return (
     <View style={{ flex: 1 }}>
       <Page title="Discover">
-        <Heading eyebrow="Follow a curiosity" title="A world worth keeping." />
+        <Heading context="Films, series, games and the people who love them." title="Find your next favorite." />
         <Searchbar
           value={query}
           onChangeText={setQuery}
           placeholder="Titles and people"
           style={discoverStyles.search}
-          inputStyle={{ fontFamily: "SourceSans3", minHeight: 42 }}
+          inputStyle={{ minHeight: 42 }}
         />
         <MediaFilters value={media} onChange={setMedia} />
-        <Text style={styles.eyebrow}>THE CATALOG</Text>
-        <View style={discoverStyles.catalog}>
+        <Text variant="titleMedium" style={discoverStyles.catalogTitle}>
+          Catalog
+        </Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={discoverStyles.catalog}
+        >
           {catalog
             .filter(
               (t) =>
@@ -55,15 +61,15 @@ export default function Discover() {
                 t.title.toLowerCase().includes(query.toLowerCase()),
             )
             .map((t) => (
-              <Cover key={t.id} title={t} width={140} />
+              <Cover key={t.id} title={t} width={108} />
             ))}
-        </View>
+        </ScrollView>
         <View style={discoverStyles.peopleSection}>
           <Text
             variant="headlineSmall"
             style={discoverStyles.peopleTitle}
           >
-            People in the lounge
+            People to follow
           </Text>
           <Text style={[styles.metadata, { marginBottom: 12 }]}>
             Find a point of view worth following.
@@ -119,23 +125,28 @@ export default function Discover() {
 
 const discoverStyles = {
   search: {
-    marginBottom: 20,
-    borderRadius: 17,
+    marginBottom: 16,
+    borderRadius: 7,
     backgroundColor: colors.surface,
   },
-  catalog: {
-    flexDirection: "row" as const,
-    flexWrap: "wrap" as const,
-    gap: 14,
-    paddingBottom: 8,
-  },
-  peopleSection: { marginTop: 28, paddingTop: 22, borderTopWidth: 1, borderColor: colors.outline },
-  peopleTitle: { fontFamily: "Fraunces", fontWeight: "800" as const, marginBottom: 5, color: colors.pearl },
-  personRow: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  catalogTitle: {
+    ...font.semibold,
+    textAlign: "center" as const,
+    color: colors.pearl,
     marginBottom: 10,
-    borderRadius: 20,
+  },
+  catalog: {
+    gap: 12,
+    paddingBottom: 8,
+    paddingHorizontal: 2,
+  },
+  peopleSection: { marginTop: 22, paddingTop: 18, borderTopWidth: 1, borderColor: colors.outline },
+  peopleTitle: { ...font.semibold, textAlign: "center" as const, marginBottom: 5, color: colors.pearl },
+  personRow: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    marginBottom: 8,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: colors.outline,
     backgroundColor: colors.surface,

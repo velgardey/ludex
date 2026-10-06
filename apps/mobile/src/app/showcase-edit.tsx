@@ -13,6 +13,7 @@ import {
 import type { Showcase } from "@ludex/domain";
 import { useLudex } from "../state";
 import { styles } from "../ui";
+import { display } from "../theme";
 import { ProfileView } from "../features/profile/ProfileView";
 import { moveShelf } from "../features/feed/model";
 export default function ShowcaseEdit() {
@@ -72,7 +73,7 @@ export default function ShowcaseEdit() {
     >
       <Text
         variant="headlineMedium"
-        style={{ fontFamily: "Fraunces", marginBottom: 18 }}
+        style={[display, { fontSize: 29, lineHeight: 36, textAlign: "center", marginBottom: 18 }]}
       >
         Make the room yours.
       </Text>

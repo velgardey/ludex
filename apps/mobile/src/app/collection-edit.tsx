@@ -25,7 +25,7 @@ export default function CollectionEdit() {
         { paddingTop: 24, paddingBottom: 40 },
       ]}
     >
-      <Heading eyebrow="Mixed-media journey" title="Give it a thread." />
+      <Heading context="Mixed-media journey" title="Give it a thread." />
       <TextInput
         label="Collection name"
         value={title}

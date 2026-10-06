@@ -29,7 +29,7 @@ import Animated, {
 } from "react-native-reanimated";
 import type { SharedValue } from "react-native-reanimated";
 import type { CatalogHit } from "@ludex/domain";
-import { colors, display, mediaAccent } from "./theme";
+import { colors, display, font, type, mediaAccent } from "./theme";
 import { useLudex } from "./state";
 
 const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
@@ -140,10 +140,10 @@ export function Page({
 
   return (
     <View style={styles.page}>
-      <Appbar.Header style={styles.appbar}>
+      <Appbar.Header style={styles.appbar} mode="center-aligned">
         <Appbar.Content
           title={title}
-          titleStyle={{ fontFamily: "Fraunces", fontWeight: "800" }}
+          titleStyle={[type.title, styles.appbarTitle]}
         />
         <Appbar.Action
           icon="creation-outline"
@@ -232,11 +232,11 @@ export function Art({
           accessibilityLabel={`${title.title} artwork`}
         />
       ) : (
-        <View style={{ flex: 1, justifyContent: "center", padding: 18 }}>
-          <Text style={[display, { fontSize: wide ? 28 : 19, fontWeight: "800" }]}>
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 18 }}>
+          <Text style={[display, { fontSize: wide ? 28 : 19, textAlign: "center" }]}>
             {title.title}
           </Text>
-          <Text style={styles.metadata}>
+          <Text style={[styles.metadata, { textAlign: "center" }]}>
             {title.media.toUpperCase()} · {title.year ?? "Edition unknown"}
           </Text>
         </View>
@@ -273,16 +273,16 @@ export function Cover({
 }
 
 export function Heading({
-  eyebrow,
+  context,
   title,
 }: {
-  eyebrow?: string;
+  context?: string;
   title: string;
 }) {
   return (
     <View style={styles.heading}>
-      {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
       <Text style={[display, styles.headingTitle]}>{title}</Text>
+      {context ? <Text style={styles.headingContext}>{context}</Text> : null}
     </View>
   );
 }
@@ -299,6 +299,20 @@ export function CinematicHeader({
   const { settings } = useLudex();
   const motion = useContext(PageMotionContext);
   const animate = motion?.enabled ?? false;
+  const aperture = useSharedValue(animate ? 1.055 : 1);
+  useEffect(() => {
+    cancelAnimation(aperture);
+    aperture.set(animate ? 1.055 : 1);
+    if (animate) {
+      aperture.set(
+        withTiming(1, { duration: 720, easing: EASE_OUT }),
+      );
+    }
+    return () => cancelAnimation(aperture);
+  }, [animate, aperture]);
+  const apertureStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: aperture.get() }],
+  }));
   const sceneStyle = useAnimatedStyle(() => {
     if (!motion?.enabled) return {};
     const scrollY = motion.scrollY.get();
@@ -319,23 +333,25 @@ export function CinematicHeader({
         style={StyleSheet.absoluteFill}
       >
         <Animated.View style={[StyleSheet.absoluteFill, sceneStyle]}>
-          {title ? (
-            <Art title={title} wide height={382} borderRadius={0} />
-          ) : settings.lowData ? (
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                { backgroundColor: colors.surface },
-              ]}
-            />
-          ) : (
-            <Image
-              source={require("../assets/art/premiere.webp")}
-              style={StyleSheet.absoluteFill}
-              contentFit="cover"
-              accessibilityLabel="Original Ludex premiere stage artwork"
-            />
-          )}
+          <Animated.View style={[StyleSheet.absoluteFill, apertureStyle]}>
+            {title ? (
+              <Art title={title} wide height={210} borderRadius={0} />
+            ) : settings.lowData ? (
+              <View
+                style={[
+                  StyleSheet.absoluteFill,
+                  { backgroundColor: colors.surface },
+                ]}
+              />
+            ) : (
+              <Image
+                source={require("../assets/art/premiere.webp")}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+                accessibilityLabel="Original Ludex premiere stage artwork"
+              />
+            )}
+          </Animated.View>
           <LinearGradient
             colors={[
               "rgba(22,13,32,0.04)",
@@ -347,12 +363,9 @@ export function CinematicHeader({
           />
           <View style={styles.heroTopline}>
             <View style={styles.heroMark} />
-            <Text style={styles.heroOverline}>A LIFE IN STORIES</Text>
+            <Text style={styles.heroOverline}>LUDEX · PERSONAL ARCHIVE</Text>
           </View>
           <View style={styles.heroCopy}>
-            <Text style={styles.heroEyebrow}>
-              {title ? "YOUR FEATURED PREMIERE" : "YOUR STORIES, IN THEIR ELEMENT"}
-            </Text>
             <Text style={styles.heroTitle} adjustsFontSizeToFit minimumFontScale={0.74}>
               {name}
             </Text>
@@ -362,7 +375,7 @@ export function CinematicHeader({
               </Text>
             ) : (
               <Text variant="bodyLarge" style={styles.heroSubhead}>
-                Your stories have a home.
+                A record of what moved you.
               </Text>
             )}
           </View>
@@ -475,8 +488,8 @@ export function MediaFilters({
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      style={{ marginBottom: 24 }}
-      contentContainerStyle={{ paddingRight: 20 }}
+      style={{ marginBottom: 18 }}
+      contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingHorizontal: 4 }}
     >
       {[
         ["all", "All media"],
@@ -508,101 +521,96 @@ export function MediaFilters({
 export const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.ink },
   appbar: { backgroundColor: colors.ink },
-  content: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 20 },
-  metadata: { fontSize: 13, color: colors.muted, lineHeight: 20 },
-  eyebrow: {
-    color: colors.lime,
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 2.1,
-    marginBottom: 9,
-  },
-  heading: { marginBottom: 20 },
-  headingTitle: { fontSize: 39, lineHeight: 43, fontWeight: "900", letterSpacing: -0.6 },
+  appbarTitle: { textAlign: "center", letterSpacing: 0.2 },
+  content: { paddingHorizontal: 18, paddingTop: 2, paddingBottom: 20 },
+  metadata: { ...type.metadata, fontSize: 12, color: colors.muted, lineHeight: 19 },
+  heading: { alignItems: "center", marginBottom: 20 },
+  headingTitle: { textAlign: "center", fontSize: 31, lineHeight: 37, letterSpacing: -0.8 },
+  headingContext: { ...type.metadata, textAlign: "center", color: colors.muted, marginTop: 7, fontSize: 13 },
   heroFrame: {
-    height: 372,
-    marginHorizontal: -20,
-    marginTop: -6,
-    marginBottom: 28,
+    height: 204,
+    marginHorizontal: -18,
+    marginTop: -2,
+    marginBottom: 20,
     overflow: "hidden",
-    borderRadius: 24,
+    borderTopLeftRadius: 58,
+    borderTopRightRadius: 58,
+    borderBottomLeftRadius: 5,
+    borderBottomRightRadius: 5,
     backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderColor: colors.outline,
   },
   heroTopline: {
     position: "absolute",
-    top: 19,
-    left: 21,
-    right: 20,
+    top: 16,
+    left: 18,
+    right: 18,
     flexDirection: "row",
     alignItems: "center",
-    gap: 9,
+    justifyContent: "center",
+    gap: 7,
   },
   heroMark: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: colors.coral,
   },
   heroOverline: {
     color: colors.pearl,
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 2.4,
+    ...font.semibold,
+    fontSize: 9,
+    letterSpacing: 1.6,
   },
-  heroCopy: { position: "absolute", left: 21, right: 21, bottom: 21 },
-  heroEyebrow: {
-    color: colors.coral,
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 2,
-    marginBottom: 8,
-  },
+  heroCopy: { position: "absolute", left: 16, right: 16, bottom: 14, alignItems: "center" },
   heroTitle: {
     ...display,
-    fontSize: 49,
-    fontWeight: "900",
-    letterSpacing: -1.4,
-    lineHeight: 53,
+    textAlign: "center",
+    fontSize: 31,
+    letterSpacing: -0.8,
+    lineHeight: 36,
   },
-  heroSubhead: { color: colors.pearl, marginTop: 8 },
-  coverTitle: { marginTop: 10, marginBottom: 2, fontWeight: "700" },
-  landscapeTitle: { marginTop: 11, fontWeight: "800" },
+  heroSubhead: { ...type.body, color: colors.pearl, marginTop: 5, fontSize: 13 },
+  coverTitle: { ...type.title, marginTop: 9, marginBottom: 2 },
+  landscapeTitle: { ...type.title, marginTop: 9 },
   mediaBadge: {
     alignSelf: "flex-start",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
   },
   mediaBadgeLabel: {
     color: colors.ink,
-    fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 1.5,
+    ...font.bold,
+    fontSize: 9,
+    letterSpacing: 1.1,
   },
   audienceBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
     borderWidth: 1,
   },
   audienceDot: { width: 5, height: 5, borderRadius: 3 },
-  audienceLabel: { fontSize: 9, fontWeight: "800", letterSpacing: 0.8 },
+  audienceLabel: { ...font.semibold, fontSize: 9, letterSpacing: 0.5 },
   empty: {
-    padding: 22,
+    alignItems: "center",
+    padding: 20,
     marginTop: 2,
     marginBottom: 20,
-    borderRadius: 22,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.outline,
     backgroundColor: colors.surface,
   },
-  emptyTitle: { fontSize: 28, lineHeight: 33, fontWeight: "900", marginBottom: 10 },
-  emptyText: { color: colors.muted, lineHeight: 24 },
+  emptyTitle: { fontSize: 25, lineHeight: 31, marginBottom: 10, textAlign: "center" },
+  emptyText: { ...type.body, color: colors.muted, lineHeight: 22, textAlign: "center" },
   emptyButton: {
-    alignSelf: "flex-start",
+    alignSelf: "center",
     marginTop: 20,
     backgroundColor: colors.coral,
   },
@@ -611,18 +619,18 @@ export const styles = StyleSheet.create({
     bottom: 18,
     right: 20,
     backgroundColor: colors.coral,
-    borderRadius: 18,
+    borderRadius: 10,
     elevation: 8,
   },
   filterChip: {
     marginRight: 8,
     minHeight: 40,
-    borderRadius: 13,
+    borderRadius: 7,
     borderColor: colors.outline,
   },
   selectedFilterChip: { backgroundColor: colors.coral, borderColor: colors.coral },
   idleFilterChip: { backgroundColor: colors.surface },
-  filterLabel: { fontWeight: "700", letterSpacing: 0.15 },
+  filterLabel: { ...font.semibold, letterSpacing: 0 },
   input: { marginBottom: 12, backgroundColor: colors.surface },
   row: { flexDirection: "row", alignItems: "center", gap: 12 },
   section: { marginVertical: 22 },

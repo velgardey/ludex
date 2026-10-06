@@ -7,7 +7,7 @@ export default function Companion() {
   return (
     <ScrollView contentContainerStyle={[styles.content, { paddingTop: 28 }]}>
       <Heading
-        eyebrow="Companion · coming in Stage C"
+        context="Companion · coming in Stage C"
         title="A little help choosing."
       />
       <Text variant="bodyLarge" style={{ lineHeight: 27, marginBottom: 24 }}>

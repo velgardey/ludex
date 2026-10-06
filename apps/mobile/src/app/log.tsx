@@ -6,6 +6,7 @@ import type { CatalogHit } from "@ludex/domain";
 import { useLudex } from "../state";
 import { Cover, Empty, styles } from "../ui";
 import { LogForm, type Draft } from "../features/log/LogForm";
+import { display } from "../theme";
 export default function Log() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { catalog, library, session, queue, store, client } = useLudex();
@@ -78,7 +79,7 @@ export default function Log() {
         <>
           <Text
             variant="headlineMedium"
-            style={{ fontFamily: "Fraunces", marginBottom: 20 }}
+            style={[display, { fontSize: 29, lineHeight: 36, textAlign: "center", marginBottom: 20 }]}
           >
             What stayed with you?
           </Text>

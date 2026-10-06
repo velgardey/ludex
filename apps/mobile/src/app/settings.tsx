@@ -7,6 +7,7 @@ import { router } from "expo-router";
 import { Button, Text, TextInput, Switch, Divider } from "react-native-paper";
 import { useLudex } from "../state";
 import { styles } from "../ui";
+import { display } from "../theme";
 export default function Settings() {
   const {
     session,
@@ -46,7 +47,7 @@ export default function Settings() {
     >
       <Text
         variant="headlineMedium"
-        style={{ fontFamily: "Fraunces", marginBottom: 20 }}
+        style={[display, { fontSize: 29, lineHeight: 36, textAlign: "center", marginBottom: 20 }]}
       >
         Your journal. Your choices.
       </Text>

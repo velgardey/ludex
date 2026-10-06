@@ -21,7 +21,7 @@ body {
   margin: 0;
   background: var(--ink);
   color: var(--text);
-  font-family: var(--font-sans), sans-serif;
+  font-family: var(--font-sora), Arial, sans-serif;
   font-size: 15px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -106,7 +106,6 @@ button {
   background: var(--ink);
 }
 .brand {
-  font-family: var(--font-display), serif;
   font-size: 39px;
   font-weight: 650;
   letter-spacing: -2px;
@@ -115,7 +114,6 @@ button {
 }
 .brand span,
 .mobile-brand span {
-  font-family: serif;
   font-size: 21px;
   color: var(--copper);
   display: inline-block;
@@ -183,7 +181,6 @@ button {
   margin-bottom: 16px;
 }
 .sidebar-lounge p {
-  font-family: var(--font-display);
   font-size: 21px;
   line-height: 1.5;
   font-weight: 400;
@@ -344,7 +341,6 @@ button {
 }
 .feed-heading h1,
 .page-heading h1 {
-  font-family: var(--font-display);
   font-weight: 400;
   font-size: 39px;
   letter-spacing: -1.1px;
@@ -459,7 +455,6 @@ button {
   justify-content: center;
   text-align: center;
   padding: 10px;
-  font-family: var(--font-display);
   font-size: 18px;
   color: #a89cba;
   z-index: 0;
@@ -497,7 +492,6 @@ button {
   margin-bottom: 9px;
 }
 .spread-info h2 {
-  font-family: var(--font-display);
   font-size: 36px;
   font-weight: 400;
   letter-spacing: -1px;
@@ -537,7 +531,6 @@ button {
   position: absolute;
   left: 0;
   top: 9px;
-  font-family: var(--font-display);
   color: var(--copper);
   font-size: 36px;
 }
@@ -605,7 +598,6 @@ button {
   padding-top: 6px;
 }
 .work-title {
-  font-family: var(--font-display);
   font-size: 22px;
   letter-spacing: -0.4px;
   padding: 0;
@@ -677,7 +669,6 @@ button {
   color: #bc9b86;
 }
 .current-work h3 {
-  font-family: var(--font-display);
   font-size: 18px;
   font-weight: 450;
   line-height: 1.3;
@@ -754,7 +745,6 @@ button {
   margin-bottom: 17px;
 }
 .lounge-invite h3 {
-  font-family: var(--font-display);
   font-size: 24px;
   font-weight: 400;
   line-height: 1.32;
@@ -797,7 +787,6 @@ button {
   color: #766682;
 }
 .journal-footer > span {
-  font-family: var(--font-display);
   font-size: 22px;
   letter-spacing: -1px;
   color: #9b859f;
@@ -923,7 +912,6 @@ button {
   padding-top: 11px;
 }
 .library-caption > button {
-  font-family: var(--font-display);
   font-size: 17px;
   line-height: 1.4;
   text-align: left;
@@ -1040,7 +1028,6 @@ button {
   margin-bottom: 10px;
 }
 .section-heading h2 {
-  font-family: var(--font-display);
   font-size: 25px;
   font-weight: 400;
 }
@@ -1126,7 +1113,6 @@ button {
   flex: 1;
 }
 .profile-identity h1 {
-  font-family: var(--font-display);
   font-size: 37px;
   font-weight: 400;
   letter-spacing: -1px;
@@ -1156,7 +1142,6 @@ button {
   margin: 34px 0;
 }
 .profile-journal-heading h2 {
-  font-family: var(--font-display);
   font-size: 29px;
   font-weight: 400;
   letter-spacing: -0.7px;
@@ -1213,7 +1198,6 @@ button {
   margin-top: 3px;
 }
 .shelf-annotation {
-  font-family: var(--font-display);
   font-size: 14px;
   font-style: italic;
   color: #ad95b6;
@@ -1252,7 +1236,6 @@ button {
   color: #cbae9e;
 }
 .collection-spread strong {
-  font-family: var(--font-display);
   font-size: 25px;
   font-weight: 400;
   letter-spacing: -0.6px;
@@ -1287,7 +1270,6 @@ button {
   margin: 0 auto 24px;
 }
 .empty-state h2 {
-  font-family: var(--font-display);
   font-size: 27px;
   font-weight: 400;
   letter-spacing: -0.6px;
@@ -1334,7 +1316,6 @@ button {
   gap: 15px;
 }
 .modal-heading h2 {
-  font-family: var(--font-display);
   font-size: 28px;
   font-weight: 400;
   letter-spacing: -0.6px;
@@ -1415,7 +1396,6 @@ button {
   border-radius: 5px;
 }
 .form-title h3 {
-  font-family: var(--font-display);
   font-size: 23px;
   font-weight: 400;
 }
@@ -1702,7 +1682,6 @@ button {
   padding: 24px 0;
 }
 .settings-list h2 {
-  font-family: var(--font-display);
   font-size: 24px;
   font-weight: 400;
   margin-bottom: 16px;
@@ -1853,8 +1832,7 @@ button {
   }
   .mobile-brand {
     display: block;
-    font-family: var(--font-display);
-    font-size: 30px;
+      font-size: 30px;
     font-weight: 600;
     letter-spacing: -1.5px;
   }
@@ -2290,12 +2268,10 @@ textarea {
   line-height: 1.8;
 }
 .privacy-page h1 {
-  font-family: var(--font-display);
   font-size: 42px;
   margin: 48px 0 24px;
 }
 .privacy-page h2 {
-  font-family: var(--font-display);
   font-size: 26px;
   margin: 36px 0 12px;
 }

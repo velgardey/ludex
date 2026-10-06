@@ -1,5 +1,5 @@
 import { NativeTabs } from "expo-router/unstable-native-tabs";
-import { colors } from "../../theme";
+import { colors, fontFaces } from "../../theme";
 export default function Tabs() {
   return (
     <NativeTabs
@@ -7,7 +7,8 @@ export default function Tabs() {
       tintColor={colors.coral}
       indicatorColor={colors.surface}
       labelStyle={{
-        fontFamily: "SourceSans3",
+        fontFamily: fontFaces.medium,
+        fontWeight: "normal",
         color: colors.muted,
         selected: { color: colors.pearl },
       }}

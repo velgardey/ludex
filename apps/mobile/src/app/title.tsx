@@ -72,7 +72,7 @@ export default function Title() {
       <Art title={title} wide />
       <View style={{ marginTop: 24 }}>
         <Heading
-          eyebrow={`${title.media} · ${title.year ?? "Year unknown"}`}
+          context={`${title.media} · ${title.year ?? "Year unknown"}`}
           title={title.title}
         />
         {title.synopsis ? (

@@ -11,6 +11,7 @@ import {
   CinematicHeader,
 } from "../../ui";
 import { SessionSpread } from "../../features/feed/SessionSpread";
+import { colors } from "../../theme";
 export default function Feed() {
   const {
     session,
@@ -29,25 +30,25 @@ export default function Feed() {
       <Page title="Ludex" refresh={() => refresh()}>
         <CinematicHeader name="The stories stay." />
         {preview ? (
-          <Text style={{ marginBottom: 20 }}>
-            Sample lounge · curated preview activity
+          <Text style={{ textAlign: "center", marginBottom: 16, color: colors.muted }}>
+            Preview journal · sample activity
           </Text>
         ) : null}
         {!session && !preview ? (
           <Empty
-            title="Make the lounge yours"
-            text="Keep films, TV and games together. Follow your people, trade notes, and remember the sessions that matter."
+            title="Keep your own record"
+            text="Bring films, series and games into one journal. Follow your people, trade notes, and keep the sessions that matter."
             action={() => router.push("/auth")}
             label="Sign in / join"
           />
         ) : null}
-        {!session ? (
+        {!session && !preview ? (
           <Button
             mode="outlined"
             onPress={() => loadPreview().catch((e) => setNotice(String(e)))}
             style={{ marginBottom: 22 }}
           >
-            Explore sample lounge
+            Explore the sample feed
           </Button>
         ) : null}
         <MediaFilters value={media} onChange={setMedia} />
@@ -71,8 +72,8 @@ export default function Feed() {
           ))}
         {session && !feed.items.length ? (
           <Empty
-            title="Your following feed is quiet"
-            text="Follow someone in Discover, or publish a log when you want to share an experience."
+            title="No new sessions yet"
+            text="Follow someone in Discover or share a log when you want the people who follow you to see it."
             action={() => router.push("/discover")}
             label="Find your people"
           />

@@ -11,7 +11,7 @@ import {
   MotionPressable,
   styles,
 } from "../../ui";
-import { colors, display } from "../../theme";
+import { colors, display, font, type } from "../../theme";
 import { useLudex } from "../../state";
 
 export function SessionSpread({ activity }: { activity: Activity }) {
@@ -29,7 +29,7 @@ export function SessionSpread({ activity }: { activity: Activity }) {
         }
       >
         <Avatar.Text
-          size={42}
+          size={36}
           label={a.author.displayName.slice(0, 1)}
           color={colors.ink}
           style={{ backgroundColor: colors.lime }}
@@ -65,7 +65,7 @@ export function SessionSpread({ activity }: { activity: Activity }) {
         }
       >
         <View style={cardStyles.poster}>
-          <Art title={a.title} wide height={252} borderRadius={20} />
+          <Art title={a.title} wide height={186} borderRadius={5} />
           <LinearGradient
             colors={["rgba(22,13,32,0.03)", "rgba(22,13,32,0.25)", "rgba(22,13,32,0.96)"]}
             locations={[0, 0.4, 1]}
@@ -76,7 +76,7 @@ export function SessionSpread({ activity }: { activity: Activity }) {
             <AudienceBadge audience={a.audience.kind} />
           </View>
           <View style={cardStyles.posterTitleWrap}>
-            <Text style={cardStyles.posterOverline}>THE SESSION</Text>
+            <Text style={cardStyles.posterOverline}>RECORDED IN THE JOURNAL</Text>
             <Text style={[display, cardStyles.posterTitle]} numberOfLines={2}>
               {a.title.title}
             </Text>
@@ -134,59 +134,60 @@ export function SessionSpread({ activity }: { activity: Activity }) {
 
 const cardStyles = StyleSheet.create({
   card: {
-    marginBottom: 24,
-    padding: 12,
-    borderRadius: 24,
-    borderWidth: 1,
+    marginBottom: 20,
+    paddingBottom: 13,
+    borderBottomWidth: 1,
     borderColor: colors.outline,
-    backgroundColor: colors.surface,
+    backgroundColor: "transparent",
   },
-  author: { minHeight: 50, marginBottom: 12, paddingHorizontal: 2 },
-  authorName: { fontWeight: "800" },
+  author: { minHeight: 42, marginBottom: 9, paddingHorizontal: 0 },
+  authorName: { ...type.title },
   rating: {
-    minWidth: 54,
-    height: 40,
+    minWidth: 48,
+    height: 34,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 13,
+    borderRadius: 4,
     backgroundColor: colors.coral,
   },
-  ratingValue: { color: colors.ink, fontSize: 16, fontWeight: "900" },
-  ratingOutOf: { color: colors.ink, fontSize: 11, fontWeight: "700" },
-  posterPress: { borderRadius: 20, overflow: "hidden" },
-  poster: { height: 252, overflow: "hidden", borderRadius: 20 },
+  ratingValue: { ...font.bold, color: colors.ink, fontSize: 15 },
+  ratingOutOf: { ...font.medium, color: colors.ink, fontSize: 10 },
+  posterPress: { borderRadius: 5, overflow: "hidden" },
+  poster: { height: 186, overflow: "hidden", borderRadius: 5 },
   posterTopline: {
     position: "absolute",
-    left: 12,
-    right: 12,
-    top: 12,
+    left: 10,
+    right: 10,
+    top: 10,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  posterTitleWrap: { position: "absolute", left: 17, right: 17, bottom: 16 },
+  posterTitleWrap: { position: "absolute", left: 14, right: 14, bottom: 13 },
   posterOverline: {
     color: colors.coral,
+    ...font.bold,
     fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 2,
-    marginBottom: 6,
+    letterSpacing: 1.3,
+    marginBottom: 4,
   },
-  posterTitle: { fontSize: 29, lineHeight: 33, fontWeight: "900" },
+  posterTitle: { fontSize: 27, lineHeight: 32 },
   caption: {
     color: colors.lime,
+    ...font.semibold,
     fontSize: 14,
-    fontWeight: "700",
     lineHeight: 20,
-    paddingTop: 12,
+    paddingTop: 9,
   },
-  hiddenDetail: { paddingTop: 14 },
-  note: { paddingTop: 14, fontSize: 17, lineHeight: 26 },
+  hiddenDetail: { paddingTop: 10 },
+  note: { ...type.body, paddingTop: 10, fontSize: 15, lineHeight: 23 },
   actions: {
     flexDirection: "row",
+    justifyContent: "center",
     marginTop: 10,
-    paddingTop: 5,
+    paddingTop: 3,
     borderTopWidth: 1,
     borderColor: colors.outline,
+    gap: 20,
   },
 });

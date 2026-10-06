@@ -20,7 +20,7 @@ export default function CollectionScreen() {
       {value ? (
         <>
           <Heading
-            eyebrow={`Collection · ${value.audience.kind}`}
+            context={`Collection · ${value.audience.kind}`}
             title={value.title}
           />
           {value.description ? <Text>{value.description}</Text> : null}

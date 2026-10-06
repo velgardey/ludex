@@ -19,7 +19,7 @@ import type {
 } from "@ludex/domain";
 import { buildLog, nextEpisodeId } from "./model";
 import { styles } from "../../ui";
-import { colors } from "../../theme";
+import { colors, display } from "../../theme";
 export type Draft = {
   kind: ProgressChange["kind"];
   day: string;
@@ -127,13 +127,13 @@ export function LogForm({
     <View>
       <Text
         variant="headlineSmall"
-        style={{ fontFamily: "Fraunces", marginBottom: 8 }}
+        style={[display, { fontSize: 25, lineHeight: 31, textAlign: "center", marginBottom: 8 }]}
       >
         {title.title}
       </Text>
       <Text
         variant="bodyMedium"
-        style={{ color: colors.muted, marginBottom: 20 }}
+        style={{ color: colors.muted, textAlign: "center", marginBottom: 20 }}
       >
         {title.year} · {title.media}
         {title.platform ? ` · Original: ${title.platform}` : ""}

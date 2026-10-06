@@ -1,10 +1,10 @@
-# Journal surface — midnight premiere
+# Journal surface — After Hours
 
-User authorization: be maximally bold, modern, beautiful and animated; use taste, Emil/frontend guidance and Sunburst. This replaces the earlier muted lounge/no decorative motion contract.
+User authorization: consistent typography/alignment throughout and distinctive hyper-stylized cinematic UI with custom motion. Preserve working Stage A product behavior.
 
-THESIS: Make a user's films, shows, games and shared moments feel like a personal premiere.
-OWN-WORLD: Aubergine #160D20, coral #FF735F, chartreuse #D8FF76 and pale orchid; oversized Fraunces, Source Sans 3 controls; original surreal Sunburst auditorium.
-STORY: Browse permitted activity, open real catalog titles, log personal progress and curate a showcase.
-FIRST VIEWPORT: Original architecture plus bold headline and clickable fanned covers; direct action remains usable throughout finite animation.
-FORM: Rounded story frames, contrasting search, pill filters, portrait and landscape shelves. Native navigation stays platform specific.
-FINISH: Batched desktop/phone/discover/showcase inspection, one material correction pass, functional and motion tests, native build/captures, fresh review and explicit external limits.
+THESIS: Turn shared watching and playing into a collectible cinema archive.
+OWN-WORLD: Existing Sunburst auditorium, coral/chartreuse/orchid against ink, one Sora family with explicit Android static weights.
+STORY: Discover real titles, log permitted progress, follow people, discuss activity and curate shelves.
+FIRST VIEWPORT: Arched cinema frame, readable headline/action, tactile catalog covers and an immediate route to actual activity.
+FORM: Open editorial feed rows, shelf rails, coherent button geometry, centered phone profile identity and single-column landscape shelves.
+FINISH: Font regression, motion/privacy/low-data behavior, narrow+zoom reflow, real emulator capture and bounded review. Provider integrations queued separately.

@@ -10,7 +10,7 @@ import {
   Landscape,
   styles,
 } from "../../ui";
-import { colors } from "../../theme";
+import { colors, font, type } from "../../theme";
 import { publicShelves } from "../feed/model";
 export function ProfileView({
   showcase,
@@ -40,7 +40,7 @@ export function ProfileView({
       <CinematicHeader name={name} title={featured} accent={accent} />
       {viewer ? (
         <View style={profileStyles.viewerNote}>
-          <Text style={styles.metadata}>
+          <Text style={[styles.metadata, { textAlign: "center" }]}>
             Public viewer preview · current visible shelves
           </Text>
         </View>
@@ -58,16 +58,18 @@ export function ProfileView({
       ) : null}
       {shelves.map((s) => (
         <View key={s.id} style={profileStyles.shelf}>
-          <View style={[styles.row, profileStyles.shelfHeading]}>
-            <View style={{ flex: 1 }}>
-              <Text style={profileStyles.shelfEyebrow}>
-                {s.layout === "spread" ? "A JOURNEY THROUGH" : "IN THE ROTATION"}
-              </Text>
+          <View style={profileStyles.shelfHeading}>
+            <View style={profileStyles.shelfTitleBlock}>
               <Text variant="titleLarge" style={profileStyles.shelfTitle}>
                 {s.title}
               </Text>
+              <Text style={profileStyles.shelfType}>
+                {s.layout === "spread" ? "An ordered journey" : "In the rotation"}
+              </Text>
             </View>
-            <AudienceBadge audience={s.audience.kind} />
+            <View style={profileStyles.audienceMeta}>
+              <AudienceBadge audience={s.audience.kind} />
+            </View>
           </View>
           <ScrollView
             horizontal
@@ -81,14 +83,14 @@ export function ProfileView({
                 s.layout === "spread" ? (
                   <Landscape key={t.id} title={t} />
                 ) : (
-                  <Cover key={t.id} title={t} width={112} />
+                <Cover key={t.id} title={t} width={108} />
                 ),
               )}
           </ScrollView>
         </View>
       ))}
       {!shelves.length ? (
-        <Text style={styles.metadata}>
+        <Text style={[styles.metadata, { textAlign: "center", marginTop: 18 }]}>
           {viewer
             ? "No public shelves are visible."
             : "Build a shelf of films, TV, games, or an ordered journey across them."}
@@ -103,32 +105,33 @@ const profileStyles = {
     paddingHorizontal: 14,
     paddingVertical: 11,
     marginBottom: 16,
-    borderRadius: 15,
+    borderRadius: 5,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.outline,
   },
   editButton: {
-    alignSelf: "flex-start" as const,
+    alignSelf: "center" as const,
     marginBottom: 22,
-    borderRadius: 15,
+    borderRadius: 6,
     borderColor: colors.coral,
   },
   shelf: {
-    marginBottom: 18,
-    padding: 15,
-    borderRadius: 23,
-    borderWidth: 1,
+    marginBottom: 4,
+    paddingTop: 18,
+    paddingBottom: 12,
+    borderTopWidth: 1,
     borderColor: colors.outline,
-    backgroundColor: colors.surface,
+    backgroundColor: "transparent",
   },
-  shelfHeading: { marginBottom: 14, alignItems: "flex-end" as const },
-  shelfEyebrow: {
-    color: colors.lime,
-    fontSize: 9,
-    fontWeight: "900" as const,
-    letterSpacing: 1.6,
-    marginBottom: 3,
+  shelfHeading: { marginBottom: 12, alignItems: "center" as const },
+  shelfTitleBlock: { width: "100%" as const, alignItems: "center" as const },
+  audienceMeta: { alignSelf: "center" as const, marginTop: 7 },
+  shelfType: { ...type.metadata, color: colors.lime, fontSize: 10, marginTop: 4 },
+  shelfTitle: {
+    ...font.semibold,
+    color: colors.pearl,
+    textAlign: "center" as const,
+    fontSize: 20,
   },
-  shelfTitle: { flex: 1, fontFamily: "Fraunces", fontWeight: "800" as const, color: colors.pearl },
 };

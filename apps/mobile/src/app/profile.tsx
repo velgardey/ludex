@@ -109,7 +109,7 @@ export default function Profile() {
         </>
       ) : (
         <Text style={styles.metadata}>
-          Sample profiles illustrate the lounge layout.
+          Sample profiles show how a public showcase works.
         </Text>
       )}
     </ScrollView>

@@ -1,46 +1,34 @@
 ---
 name: Ludex
-description: Midnight premiere — a cinematic social journal for films, series and games.
+description: After Hours — a cinematic social archive, with one consistent type family.
 ---
 
-# Ludex: The Midnight Premiere
+# Ludex: After Hours
 
-The user requested a bold, animated replacement for the muted lounge design. Ludex now uses original Sunburst cinema architecture, oversized editorial typography, electric coral actions and chartreuse progress accents. The feed and showcase remain the first priority. Real catalog covers, human notes and personal curation supply the content; generated artwork supplies the brand world.
+The user's latest direction asks for consistent fonts, correct alignment, a distinctive interface and custom cinematic motion. The existing Sunburst cinema architecture and coral/chartreuse signature remain; repetitive rounded cards, pill filters and generic slogans give way to an editorial journal with a framed cinema screen, open activity rows, collectible covers and shelf rails.
 
-## Color and typography
+## Typography
 
-| Role | Value | Use |
-|---|---|---|
-| Ink | #160D20 | Main dark room |
-| Surface | #21142E | Native and web content surfaces |
-| Raised | #30213F | Grouped controls and contrast |
-| Electric coral | #FF735F | Primary actions and active navigation |
-| Chartreuse | #D8FF76 | Logging, progress, ratings and media markers |
-| Pale orchid | #F3DFFF | Contrasting filters and search |
-| Pearl | #F3E9FA | Main reading text |
-| Silver lilac | #BFAFCB | Supporting copy |
-| Cinema edge | #493352 | Structural borders |
+**Sora is the sole family** for brand, display, body, controls, navigation, forms, dialogs and metadata on both clients. The web uses a local variable WOFF2 with an explicit 100–800 weight range. Android registers five static instances (400, 500, 600, 700, 800) under explicit aliases and uses `fontWeight: normal` with the selected face. This prevents the prior variable-face/synthetic-weight mismatch. Paper text roles, input text and native navigation receive the same family. OFL licenses ship beside both sets of font assets. Body text remains left aligned for reading; phone showcase identity, avatar and edit controls form a centered composition.
 
-Fraunces is the existing editorial display voice, used at a deliberately larger scale for brand and story identity. Source Sans 3 remains the interface voice. Both fonts are self-hosted. Showcase themes vary local accent color: coral lounge, chartreuse matinee, lavender midnight. Source code retains legacy `violet`/`copper` variable names for compatible components; they now resolve to coral/chartreuse.
+Web roles: display 36–56px / 750; headline 31px / 650; section title 23–28px / 600–650; body 14px; control 12–13px / 650; metadata 10–12px. Tracking floor -0.04em. Native uses Material text roles plus explicit Sora face styles; text scaling stays enabled.
 
-## Composition
+## Palette and surfaces
 
-The web premiere header pairs original cinema architecture with a large title, clear action and three interactive catalog covers. The hero mounts only after account preferences permit it, then loads eagerly; other media covers remain lazy. Poster silhouettes overlap intentionally without covering primary controls. Search uses a pale contrasting field. Feed filters use pills, and activity frames use layered aubergine, readable borders and restrained shadows. The lead story has panoramic artwork, a saturated media badge, title, note and rating.
+Ink #160D20, web surface #24182F, native surface #29182F, raised #30213F, pearl #F3E9FA, orchid #F3DFFF, coral #FF735F, chartreuse #D8FF76, web muted #C0B0CB, native muted #C7B5D0, line #57405F. Hover coral #FFA394/#FFAD9F/#FFA594; borders #A380B3/#886396/#8B6A99/#8E6BA0; translucent pearl corners #FFF0ED8C; supporting artwork text #DCC9E3/#E7DBE9/#E5D4EC. Deep image/frame fields #22152C/#382140/#382740 and low-opacity ink gradients derive from the cinema scene. Shadows have soft offset depth; card containers use a border or shadow, not both. Showcase themes retain coral, lime and lavender local accents.
 
-The showcase opens with user-selected artwork and identity, followed by configurable portrait and landscape shelves. Its curation remains data driven. Missing or failed artwork retains title fallback. Low-data mode withholds the new premiere image request and preserves content and controls. Existing external covers use CSS hiding and are not claimed to avoid all web transfers.
+## Composition and alignment
 
-Desktop retains sidebar and companion rail. Below 1190px the reading column leads without a rail; below 760px it uses mobile navigation. Android uses Expo Router tabs, native route sheets and Paper controls with the same palette, cinematic header and story frames. Its captured display text renders as bold sans despite the registered Fraunces family; exact native font mapping remains a minor polish item, not verified typography parity. It retains durable offline and account behavior.
+A split cinema frame crops the original auditorium inside an arched screen. The headline, short product-specific copy and logging/search action have a common left edge. Fanned, clickable catalog covers sit within the frame. Finite screen-opening motion emphasizes the art without obstructing controls. Feed rows show authors, visible progress, title art, optional human notes and social actions without a card around every entry. No fabricated note is supplied when the user has not written one.
 
-## Motion
+The reading column is centered within the companion shell; sidebar and rail yield to mobile navigation on narrow screens. Buttons center labels and icons optically and mathematically. Profile shelves use open headings, actual counts, offset cover shadows and a subtle shelf rail. Phone profiles center identity and controls; landscape shelves stack to accommodate long titles. Search, forms, receipts and settings share compact 6–12px corners and the same typography.
 
-Anime.js WAAPI provides finite premiere choreography: copy fades and lifts over 650ms, artwork settles over 1100ms, and posters enter with a short stagger. Motion provides a spring on a separate poster inner surface for hover and press, avoiding competing transform ownership. Visible feed stories reveal once through IntersectionObserver with a 450ms opacity/transform transition. No continuously running decoration, scroll listener or per-frame React state is used.
+## Motion and preferences
 
-Buttons and inputs work during every animation. System and saved reduced-motion preferences cancel ongoing entrances, disable spring interactions and remove CSS motion. Android uses Reanimated on the UI thread for entrance and pressed feedback and combines system and saved preferences. Static screenshots establish composition; they do not establish physical-device frame rate or accessibility acceptance.
+Anime.js WAAPI authors a finite 900ms cinema aperture (`clip-path` + opacity), 650ms copy entrance and short poster stagger. Motion springs provide poster hover/press on a separate inner surface. Visible activity entries retain bounded observer reveals. CSS cover lifting uses 240ms easing and is restricted to fine pointers. Native Reanimated handles UI-thread entrance and press feedback. No perpetual decoration, scroll hijacking, delayed input or artificial loading.
 
-## Components and quality
+Saved/system reduced motion cancels current effects and leaves every control visible. Low-data and unresolved account preferences withhold the premiere image request; existing remote catalog covers retain the older CSS hiding behavior. Clip-path frame cost and physical-device FPS remain measurement work, not performance claims.
 
-Primary actions use coral with dark text; the main Log action uses chartreuse. Secondary actions use raised surfaces and readable borders. Search, dialogs, receipts and empty states share rounded cinema geometry. Profile themes change local accents while keeping the base world recognizable.
+## Verification
 
-Keep samples explicitly labeled, public/private audience settings separate, spoiler fields omitted, and all writes grounded in real account state. Preserve keyboard focus, semantic labels and platform touch controls. External catalog/AI/provider connectors remain separate delivery stages.
-
-Source: `app/premiere.css`, `web/components/PremiereStage.tsx`, `web/hooks/useReveal.ts`, and `apps/mobile/src/`. Verification and current capture paths are recorded in `docs/validation/premiere-redesign.md`.
+The new web typography test first reproduced the mixed-family bug, then verified the loaded Sora family across four destinations and title dialogs, 320px reflow and 200% zoom. Native role regression verifies static aliases and disables synthetic weights. Current verification, installed emulator captures and limitations are in `docs/validation/after-hours-refinement.md`. The older Premiere report is historical. Provider/Supabase/Google OAuth integration remains queued separately from this visual correction.
