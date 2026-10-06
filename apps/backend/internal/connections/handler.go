@@ -14,6 +14,7 @@ type Config struct {
 	ResolveUser   func(*http.Request) (string, error)
 	Search        func(context.Context, string, string, string) ([]Match, error)
 	LoadVersion   func(context.Context, string, string) (int64, error)
+	EpisodeExists func(context.Context, string, string) (bool, error)
 	ApplyProgress func(context.Context, string, json.RawMessage) (json.RawMessage, error)
 	ApplyLibrary  func(context.Context, string, json.RawMessage) (json.RawMessage, error)
 	SteamKey      string
@@ -189,6 +190,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	parts := strings.Split(strings.Trim(path, "/"), "/")
+	if len(parts) == 5 && parts[0] == "imports" && parts[2] == "rows" && parts[4] == "match" && r.Method == http.MethodPost {
+		h.matchImportRow(w, r, user, parts[1], parts[3])
+		return
+	}
 	if len(parts) == 3 && parts[0] == "imports" && parts[1] == "jobs" && r.Method == "GET" {
 		h.importJobStatus(w, r, user, parts[2])
 		return

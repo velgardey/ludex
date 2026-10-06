@@ -3,6 +3,7 @@ package connections
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -11,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -68,6 +70,7 @@ func TestImportCommitQueuesRowsAndPersistsIdempotentOutcomes(t *testing.T) {
 	p := testConnectionsDB(t)
 	ctx := context.Background()
 	var calls []map[string]any
+	var edits []map[string]any
 	versions := map[string]int64{"tmdb:movie:1": 2, "tmdb:show:2": 3, "igdb:game:3": 4}
 	h := New(p, Config{
 		ResolveUser: func(r *http.Request) (string, error) { return r.Header.Get("X-User"), nil },
@@ -82,6 +85,14 @@ func TestImportCommitQueuesRowsAndPersistsIdempotentOutcomes(t *testing.T) {
 				t.Fatal(err)
 			}
 			calls = append(calls, command)
+			return json.RawMessage(`{"status":"accepted"}`), nil
+		},
+		ApplyLibrary: func(_ context.Context, _ string, raw json.RawMessage) (json.RawMessage, error) {
+			var command map[string]any
+			if err := json.Unmarshal(raw, &command); err != nil {
+				t.Fatal(err)
+			}
+			edits = append(edits, command)
 			return json.RawMessage(`{"status":"accepted"}`), nil
 		},
 	})
@@ -116,10 +127,10 @@ func TestImportCommitQueuesRowsAndPersistsIdempotentOutcomes(t *testing.T) {
 	if done, err := jobs.Run(ctx, p, h.WorkHandlers(), 10); err != nil || done != 1 {
 		t.Fatalf("worker pass = %d, %v; want one completed job", done, err)
 	}
-	if len(calls) != 3 {
-		t.Fatalf("progress calls = %d, want movie, show and game", len(calls))
+	if len(calls) != 2 || len(edits) != 1 {
+		t.Fatalf("progress calls = %d, library edits = %d; want dated movie, show episode, and undated game state", len(calls), len(edits))
 	}
-	want := map[string]string{"tmdb:movie:1": "movie-viewed", "tmdb:show:2": "episode-watched", "igdb:game:3": "game-session"}
+	want := map[string]string{"tmdb:movie:1": "movie-viewed", "tmdb:show:2": "episode-watched"}
 	for _, call := range calls {
 		titleID := call["titleId"].(string)
 		change := call["change"].(map[string]any)
@@ -131,6 +142,9 @@ func TestImportCommitQueuesRowsAndPersistsIdempotentOutcomes(t *testing.T) {
 		if call["titleId"] == "tmdb:show:2" && call["change"].(map[string]any)["episodeId"] != "bluey:s1:e1" {
 			t.Errorf("show episode id missing: %#v", call)
 		}
+	}
+	if len(edits) != 1 || edits[0]["titleId"] != "igdb:game:3" || edits[0]["patch"].(map[string]any)["state"] != "planned" || edits[0]["patch"].(map[string]any)["emulator"] != "Steam Deck" {
+		t.Fatalf("undated game was not preserved as a planned library edit: %#v", edits)
 	}
 	status := callConnections(t, h, "alice", http.MethodGet, queuedBody.PollURL, nil)
 	if status.Code != http.StatusOK {
@@ -155,7 +169,7 @@ func TestImportCommitQueuesRowsAndPersistsIdempotentOutcomes(t *testing.T) {
 	if err := h.WorkHandlers()["import-commit"](ctx, jobs.Job{UserID: "alice", Payload: json.RawMessage(`{"batchId":"` + previewBody.ID + `"}`)}); err != nil {
 		t.Fatal(err)
 	}
-	if len(calls) != 3 {
+	if len(calls) != 2 || len(edits) != 1 {
 		t.Fatalf("retry recorded duplicate progress: %d calls", len(calls))
 	}
 }
@@ -268,6 +282,295 @@ func TestShowImportUsesLibraryEditAndRequiresEpisodeIdentityForEpisodeClaims(t *
 	}
 	if result.Status != "partial" || result.Accepted != 1 || result.Remaining != 1 || result.Rows[1].Status != "needs-episode" {
 		t.Fatalf("show episode claim did not require an episode ID: %s", status.Body.String())
+	}
+}
+
+func TestImportCanResolveUnmatchedRowsAfterTheAutomaticMatchWindow(t *testing.T) {
+	p := testConnectionsDB(t)
+	var progressCalls int
+	h := New(p, Config{
+		ResolveUser: func(r *http.Request) (string, error) { return r.Header.Get("X-User"), nil },
+		Search: func(_ context.Context, title, media, _ string) ([]Match, error) {
+			return []Match{{ID: "tmdb:movie:" + strings.ReplaceAll(strings.ToLower(title), " ", "-"), Title: title, Media: media}}, nil
+		},
+		LoadVersion: func(context.Context, string, string) (int64, error) { return 0, nil },
+		ApplyProgress: func(context.Context, string, json.RawMessage) (json.RawMessage, error) {
+			progressCalls++
+			return json.RawMessage(`{"status":"accepted"}`), nil
+		},
+	})
+	var csv strings.Builder
+	csv.WriteString("title,media,date\n")
+	for i := 0; i < 51; i++ {
+		csv.WriteString("Film ")
+		csv.WriteString(strconv.Itoa(i))
+		csv.WriteString(",movie,2024-01-01\n")
+	}
+	preview := callConnections(t, h, "alice", http.MethodPost, "/api/imports/preview", map[string]any{"source": "csv", "csv": csv.String()})
+	var previewBody struct {
+		ID   string      `json:"id"`
+		Rows []ImportRow `json:"rows"`
+	}
+	if preview.Code != http.StatusCreated || json.Unmarshal(preview.Body.Bytes(), &previewBody) != nil || len(previewBody.Rows) != 51 {
+		t.Fatalf("large preview failed: %d %s", preview.Code, preview.Body.String())
+	}
+	row := previewBody.Rows[50]
+	if row.Status != "needs-match" {
+		t.Fatalf("row beyond automatic match window = %q, want needs-match", row.Status)
+	}
+	matched := callConnections(t, h, "alice", http.MethodPost,
+		"/api/imports/"+previewBody.ID+"/rows/"+row.ID+"/match", map[string]any{"titleId": "tmdb:movie:51"})
+	var matchedBody struct {
+		ID             string `json:"id"`
+		Status         string `json:"status"`
+		MatchedTitleID string `json:"matchedTitleId"`
+	}
+	if matched.Code != http.StatusOK || json.Unmarshal(matched.Body.Bytes(), &matchedBody) != nil || matchedBody.ID != row.ID || matchedBody.Status != "matched" || matchedBody.MatchedTitleID != "tmdb:movie:51" {
+		t.Fatalf("manual match failed: %d %s", matched.Code, matched.Body.String())
+	}
+	otherOwner := callConnections(t, h, "bob", http.MethodPost,
+		"/api/imports/"+previewBody.ID+"/rows/"+row.ID+"/match", map[string]any{"titleId": "tmdb:movie:owned-by-bob"})
+	if otherOwner.Code != http.StatusNotFound {
+		t.Fatalf("manual match was not owner-scoped: %d %s", otherOwner.Code, otherOwner.Body.String())
+	}
+	queued := callConnections(t, h, "alice", http.MethodPost, "/api/imports/"+previewBody.ID+"/commit", map[string]any{})
+	var queuedBody struct {
+		JobID string `json:"jobId"`
+	}
+	if queued.Code != http.StatusAccepted || json.Unmarshal(queued.Body.Bytes(), &queuedBody) != nil {
+		t.Fatalf("resolved batch did not queue: %d %s", queued.Code, queued.Body.String())
+	}
+	if done, err := jobs.Run(context.Background(), p, h.WorkHandlers(), 10); err != nil || done != 1 {
+		t.Fatalf("worker pass = %d, %v", done, err)
+	}
+	if progressCalls != 51 {
+		t.Fatalf("progress calls = %d, want all 51 reviewed rows", progressCalls)
+	}
+}
+
+func TestImportMatchCanResolveAShowEpisodeAfterCatalogValidation(t *testing.T) {
+	p := testConnectionsDB(t)
+	var progress []map[string]any
+	h := New(p, Config{
+		ResolveUser: func(r *http.Request) (string, error) { return r.Header.Get("X-User"), nil },
+		Search: func(_ context.Context, title, media, _ string) ([]Match, error) {
+			return []Match{{ID: "tmdb:show:101", Title: title, Media: media}}, nil
+		},
+		LoadVersion: func(context.Context, string, string) (int64, error) { return 0, nil },
+		EpisodeExists: func(_ context.Context, titleID, episodeID string) (bool, error) {
+			return titleID == "tmdb:show:101" && episodeID == "tmdb:episode:91", nil
+		},
+		ApplyProgress: func(_ context.Context, _ string, raw json.RawMessage) (json.RawMessage, error) {
+			var command map[string]any
+			if err := json.Unmarshal(raw, &command); err != nil {
+				t.Fatal(err)
+			}
+			progress = append(progress, command)
+			return json.RawMessage(`{"status":"accepted"}`), nil
+		},
+	})
+	preview := callConnections(t, h, "alice", http.MethodPost, "/api/imports/preview", map[string]any{
+		"source": "csv",
+		"csv":    "title,media,state,episode\n" + "The Series,show,completed,Episode One\n",
+	})
+	var previewBody struct {
+		ID string `json:"id"`
+	}
+	if preview.Code != http.StatusCreated || json.Unmarshal(preview.Body.Bytes(), &previewBody) != nil {
+		t.Fatalf("preview failed: %d %s", preview.Code, preview.Body.String())
+	}
+	queueAndRun := func() {
+		t.Helper()
+		queued := callConnections(t, h, "alice", http.MethodPost, "/api/imports/"+previewBody.ID+"/commit", map[string]any{})
+		if queued.Code != http.StatusAccepted {
+			t.Fatalf("commit did not queue: %d %s", queued.Code, queued.Body.String())
+		}
+		if done, err := jobs.Run(context.Background(), p, h.WorkHandlers(), 10); err != nil || done != 1 {
+			t.Fatalf("worker pass = %d, %v", done, err)
+		}
+	}
+	queueAndRun()
+	// Re-read the batch through the owner-scoped job poll URL to obtain its row ID.
+	var jobID string
+	if err := p.QueryRow(context.Background(), `SELECT id FROM work_jobs WHERE user_id='alice' AND kind='import-commit' ORDER BY created_at DESC LIMIT 1`).Scan(&jobID); err != nil {
+		t.Fatal(err)
+	}
+	status := callConnections(t, h, "alice", http.MethodGet, "/api/imports/jobs/"+jobID, nil)
+	var statusBody struct {
+		Rows []ImportRow `json:"rows"`
+	}
+	if status.Code != http.StatusOK || json.Unmarshal(status.Body.Bytes(), &statusBody) != nil || len(statusBody.Rows) != 1 || statusBody.Rows[0].Status != "needs-episode" {
+		t.Fatalf("missing episode did not wait for review: %d %s", status.Code, status.Body.String())
+	}
+	row := statusBody.Rows[0]
+	invalid := callConnections(t, h, "alice", http.MethodPost,
+		"/api/imports/"+previewBody.ID+"/rows/"+row.ID+"/match", map[string]any{"episodeId": "tmdb:episode:404"})
+	if invalid.Code != http.StatusBadRequest {
+		t.Fatalf("unknown episode was accepted: %d %s", invalid.Code, invalid.Body.String())
+	}
+	matched := callConnections(t, h, "alice", http.MethodPost,
+		"/api/imports/"+previewBody.ID+"/rows/"+row.ID+"/match", map[string]any{"episodeId": "tmdb:episode:91"})
+	if matched.Code != http.StatusOK {
+		t.Fatalf("known episode could not be selected: %d %s", matched.Code, matched.Body.String())
+	}
+	queueAndRun()
+	if len(progress) != 1 {
+		t.Fatalf("progress calls = %d, want one explicit episode event", len(progress))
+	}
+	change := progress[0]["change"].(map[string]any)
+	if change["kind"] != "episode-watched" || change["episodeId"] != "tmdb:episode:91" {
+		t.Fatalf("episode ID was not carried into explicit progress: %#v", progress[0])
+	}
+}
+
+func TestMovieAndGameImportUsesLibraryStateForStatusAndProgressOnlyForDatedRows(t *testing.T) {
+	p := testConnectionsDB(t)
+	var edits []map[string]any
+	var progress []map[string]any
+	h := New(p, Config{
+		ResolveUser: func(r *http.Request) (string, error) { return r.Header.Get("X-User"), nil },
+		Search: func(_ context.Context, title, media, _ string) ([]Match, error) {
+			return []Match{{ID: "fixture:" + media + ":" + strings.ReplaceAll(strings.ToLower(title), " ", "-"), Title: title, Media: media}}, nil
+		},
+		LoadVersion: func(context.Context, string, string) (int64, error) { return 0, nil },
+		ApplyLibrary: func(_ context.Context, _ string, raw json.RawMessage) (json.RawMessage, error) {
+			var command map[string]any
+			if err := json.Unmarshal(raw, &command); err != nil {
+				t.Fatal(err)
+			}
+			edits = append(edits, command)
+			return json.RawMessage(`{"status":"accepted"}`), nil
+		},
+		ApplyProgress: func(_ context.Context, _ string, raw json.RawMessage) (json.RawMessage, error) {
+			var command map[string]any
+			if err := json.Unmarshal(raw, &command); err != nil {
+				t.Fatal(err)
+			}
+			progress = append(progress, command)
+			return json.RawMessage(`{"status":"accepted"}`), nil
+		},
+	})
+	preview := callConnections(t, h, "alice", http.MethodPost, "/api/imports/preview", map[string]any{
+		"source": "csv",
+		"csv": "title,media,state,date,played_on,rating,note,emulator\n" +
+			"Dropped Film,movie,dropped,, ,,,\n" +
+			"Paused Game,game,paused,2023-02-03,2023-02-03,7,Keep this,Steam Deck\n" +
+			"Dated Film,movie,,2024-04-05,,,,\n" +
+			"Dated Game,game,,,2024-05-06,,,Steam Deck\n" +
+			"Unspecified Film,movie,,,,,,\n",
+	})
+	var previewBody struct {
+		ID string `json:"id"`
+	}
+	if preview.Code != http.StatusCreated || json.Unmarshal(preview.Body.Bytes(), &previewBody) != nil {
+		t.Fatalf("preview failed: %d %s", preview.Code, preview.Body.String())
+	}
+	queued := callConnections(t, h, "alice", http.MethodPost, "/api/imports/"+previewBody.ID+"/commit", map[string]any{})
+	var queuedBody struct {
+		JobID string `json:"jobId"`
+	}
+	if queued.Code != http.StatusAccepted || json.Unmarshal(queued.Body.Bytes(), &queuedBody) != nil {
+		t.Fatalf("commit did not queue: %d %s", queued.Code, queued.Body.String())
+	}
+	if done, err := jobs.Run(context.Background(), p, h.WorkHandlers(), 10); err != nil || done != 1 {
+		t.Fatalf("worker pass = %d, %v", done, err)
+	}
+	if len(edits) != 3 {
+		t.Fatalf("library edits = %d, want explicit movie/game states and one undated title", len(edits))
+	}
+	patches := map[string]map[string]any{}
+	for _, edit := range edits {
+		patches[edit["titleId"].(string)] = edit["patch"].(map[string]any)
+	}
+	if patches["fixture:movie:dropped-film"]["state"] != "dropped" || patches["fixture:game:paused-game"]["state"] != "paused" {
+		t.Fatalf("explicit states were not preserved through library edits: %#v", patches)
+	}
+	if patches["fixture:movie:unspecified-film"]["state"] != "planned" {
+		t.Fatalf("undated unclassified title was not kept planned: %#v", patches)
+	}
+	if patches["fixture:game:paused-game"]["rating"] != float64(7) || patches["fixture:game:paused-game"]["note"] != "Keep this" || patches["fixture:game:paused-game"]["playedOn"] != "2023-02-03" || patches["fixture:game:paused-game"]["emulator"] != "Steam Deck" {
+		t.Fatalf("game metadata was not retained by the state edit: %#v", patches)
+	}
+	if len(progress) != 2 {
+		t.Fatalf("progress events = %d, want only the two dated rows without explicit state", len(progress))
+	}
+	kinds := map[string]string{}
+	for _, command := range progress {
+		change := command["change"].(map[string]any)
+		kinds[command["titleId"].(string)] = change["kind"].(string)
+	}
+	if kinds["fixture:movie:dated-film"] != "movie-viewed" || kinds["fixture:game:dated-game"] != "game-session" {
+		t.Fatalf("dated progress kinds were incorrect: %#v", kinds)
+	}
+}
+
+func TestFailedImportRowCanBeRetriedFromPartialBatchWithSameCommandID(t *testing.T) {
+	p := testConnectionsDB(t)
+	var calls []map[string]any
+	h := New(p, Config{
+		ResolveUser: func(r *http.Request) (string, error) { return r.Header.Get("X-User"), nil },
+		Search: func(_ context.Context, title, media, _ string) ([]Match, error) {
+			return []Match{{ID: "tmdb:movie:1984", Title: title, Media: media, Year: 1984}}, nil
+		},
+		LoadVersion: func(context.Context, string, string) (int64, error) { return 0, nil },
+		ApplyProgress: func(_ context.Context, _ string, raw json.RawMessage) (json.RawMessage, error) {
+			var command map[string]any
+			if err := json.Unmarshal(raw, &command); err != nil {
+				t.Fatal(err)
+			}
+			calls = append(calls, command)
+			if len(calls) == 1 {
+				return nil, errors.New("catalog provider unavailable")
+			}
+			return json.RawMessage(`{"status":"accepted"}`), nil
+		},
+	})
+	preview := callConnections(t, h, "alice", http.MethodPost, "/api/imports/preview", map[string]any{
+		"source": "letterboxd",
+		"csv":    "Name,Year,Watched Date\nDune,1984,2026-10-05\n",
+	})
+	var previewBody struct {
+		ID string `json:"id"`
+	}
+	if preview.Code != http.StatusCreated || json.Unmarshal(preview.Body.Bytes(), &previewBody) != nil {
+		t.Fatalf("preview failed: %d %s", preview.Code, preview.Body.String())
+	}
+	runCommit := func() string {
+		t.Helper()
+		queued := callConnections(t, h, "alice", http.MethodPost, "/api/imports/"+previewBody.ID+"/commit", map[string]any{})
+		var body struct {
+			JobID   string `json:"jobId"`
+			PollURL string `json:"pollUrl"`
+		}
+		if queued.Code != http.StatusAccepted || json.Unmarshal(queued.Body.Bytes(), &body) != nil {
+			t.Fatalf("commit did not queue: %d %s", queued.Code, queued.Body.String())
+		}
+		if done, err := jobs.Run(context.Background(), p, h.WorkHandlers(), 10); err != nil || done != 1 {
+			t.Fatalf("worker pass = %d, %v", done, err)
+		}
+		return body.PollURL
+	}
+	firstPoll := runCommit()
+	firstStatus := callConnections(t, h, "alice", http.MethodGet, firstPoll, nil)
+	var firstBody struct {
+		Status string      `json:"status"`
+		Rows   []ImportRow `json:"rows"`
+	}
+	if firstStatus.Code != http.StatusOK || json.Unmarshal(firstStatus.Body.Bytes(), &firstBody) != nil || firstBody.Status != "partial" || len(firstBody.Rows) != 1 || firstBody.Rows[0].Status != "failed" {
+		t.Fatalf("transient failure was not exposed as a retryable partial row: %d %s", firstStatus.Code, firstStatus.Body.String())
+	}
+	secondPoll := runCommit()
+	secondStatus := callConnections(t, h, "alice", http.MethodGet, secondPoll, nil)
+	var secondBody struct {
+		Status   string      `json:"status"`
+		Accepted int         `json:"accepted"`
+		Rows     []ImportRow `json:"rows"`
+	}
+	if secondStatus.Code != http.StatusOK || json.Unmarshal(secondStatus.Body.Bytes(), &secondBody) != nil || secondBody.Status != "completed" || secondBody.Accepted != 1 || len(secondBody.Rows) != 1 || secondBody.Rows[0].Status != "accepted" {
+		t.Fatalf("partial batch retry did not accept the row: %d %s", secondStatus.Code, secondStatus.Body.String())
+	}
+	if len(calls) != 2 || calls[0]["commandId"] != calls[1]["commandId"] {
+		t.Fatalf("retry did not reuse the stable command identity: %#v", calls)
 	}
 }
 

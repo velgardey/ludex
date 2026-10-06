@@ -33,6 +33,127 @@ func (h *Handler) WorkHandlers() map[string]jobs.Handler {
 	return map[string]jobs.Handler{importCommitJobKind: h.runImportCommit}
 }
 
+func (h *Handler) matchImportRow(w http.ResponseWriter, r *http.Request, user, batchID, rowID string) {
+	var in struct {
+		TitleID   string `json:"titleId"`
+		EpisodeID string `json:"episodeId"`
+	}
+	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096))
+	decoder.DisallowUnknownFields()
+	if decoder.Decode(&in) != nil {
+		problem(w, http.StatusBadRequest, "invalid-import-match")
+		return
+	}
+	in.TitleID = strings.TrimSpace(in.TitleID)
+	in.EpisodeID = strings.TrimSpace(in.EpisodeID)
+	if len(in.TitleID) > 200 || len(in.EpisodeID) > 200 {
+		problem(w, http.StatusBadRequest, "invalid-import-match")
+		return
+	}
+	tx, err := h.db.BeginTx(r.Context(), pgx.TxOptions{})
+	if err != nil {
+		problem(w, http.StatusInternalServerError, "write-failed")
+		return
+	}
+	defer tx.Rollback(r.Context())
+	var batchStatus string
+	var body json.RawMessage
+	if err = tx.QueryRow(r.Context(), `SELECT status,rows FROM import_batches WHERE id=$1 AND user_id=$2 FOR UPDATE`, batchID, user).Scan(&batchStatus, &body); err != nil {
+		problem(w, http.StatusNotFound, "import-not-found")
+		return
+	}
+	if batchStatus != "preview" && batchStatus != "partial" {
+		problem(w, http.StatusConflict, "import-not-editable")
+		return
+	}
+	var rows []ImportRow
+	if err = json.Unmarshal(body, &rows); err != nil {
+		problem(w, http.StatusInternalServerError, "invalid-saved-import")
+		return
+	}
+	index := -1
+	for i := range rows {
+		if rows[i].ID == rowID {
+			index = i
+			break
+		}
+	}
+	if index < 0 {
+		problem(w, http.StatusNotFound, "import-row-not-found")
+		return
+	}
+	row := rows[index]
+	if row.Status != "needs-match" && row.Status != "matched" && row.Status != "needs-episode" {
+		problem(w, http.StatusConflict, "import-row-not-matchable")
+		return
+	}
+	titleID := in.TitleID
+	if titleID == "" {
+		titleID = row.MatchedTitleID
+	}
+	if titleID == "" || !validImportTitleID(titleID, row.Media) {
+		problem(w, http.StatusBadRequest, "import-title-media-mismatch")
+		return
+	}
+	if row.Media != "show" && in.EpisodeID != "" {
+		problem(w, http.StatusBadRequest, "episode-not-supported")
+		return
+	}
+	needsEpisode := row.EpisodeTitle != "" || row.EpisodeID != "" || row.Status == "needs-episode"
+	if titleID != row.MatchedTitleID {
+		row.EpisodeID = ""
+	}
+	row.MatchedTitleID = titleID
+	if in.EpisodeID != "" {
+		row.EpisodeID = in.EpisodeID
+	}
+	if row.Media == "show" && row.EpisodeID != "" {
+		if h.cfg.EpisodeExists == nil {
+			problem(w, http.StatusServiceUnavailable, "episode-validation-unavailable")
+			return
+		}
+		exists, err := h.cfg.EpisodeExists(r.Context(), row.MatchedTitleID, row.EpisodeID)
+		if err != nil {
+			problem(w, http.StatusServiceUnavailable, "episode-validation-unavailable")
+			return
+		}
+		if !exists {
+			problem(w, http.StatusBadRequest, "unknown-episode")
+			return
+		}
+	}
+	row.Status = "matched"
+	if row.Media == "show" && needsEpisode && row.EpisodeID == "" {
+		row.Status = "needs-episode"
+	}
+	row.Outcome = ""
+	row.BaseVersion = nil
+	rows[index] = row
+	encoded, err := json.Marshal(rows)
+	if err != nil {
+		problem(w, http.StatusInternalServerError, "write-failed")
+		return
+	}
+	if _, err = tx.Exec(r.Context(), `UPDATE import_batches SET rows=$3::jsonb WHERE id=$1 AND user_id=$2`, batchID, user, string(encoded)); err != nil {
+		problem(w, http.StatusInternalServerError, "write-failed")
+		return
+	}
+	if err = tx.Commit(r.Context()); err != nil {
+		problem(w, http.StatusInternalServerError, "write-failed")
+		return
+	}
+	result := map[string]string{"id": row.ID, "status": row.Status, "matchedTitleId": row.MatchedTitleID}
+	if row.EpisodeID != "" {
+		result["episodeId"] = row.EpisodeID
+	}
+	output(w, http.StatusOK, result)
+}
+
+func validImportTitleID(id, media string) bool {
+	parts := strings.Split(id, ":")
+	return len(parts) == 3 && parts[0] != "" && parts[1] == media && parts[2] != "" && !strings.ContainsAny(id, " \t\r\n")
+}
+
 func (h *Handler) queueImport(w http.ResponseWriter, r *http.Request, user, batchID string) {
 	if h.cfg.LoadVersion == nil {
 		problem(w, http.StatusServiceUnavailable, "library-version-unavailable")
@@ -264,7 +385,7 @@ func (h *Handler) prepareImportRow(ctx context.Context, user, batchID, rowID str
 		}
 		return row, true, tx.Commit(ctx)
 	}
-	if row.Media == "show" && row.State == "completed" {
+	if row.Media == "show" && row.State == "completed" && row.EpisodeID == "" {
 		row.Status, row.Outcome = "needs-episode", "complete-episode-evidence-required"
 		rows[index] = row
 		encoded, _ := json.Marshal(rows)
@@ -302,15 +423,32 @@ func (h *Handler) importCommand(batchID string, row ImportRow) (json.RawMessage,
 		return nil, nil, "", errors.New("missing base version")
 	}
 	commandID := "import:" + batchID + ":" + row.ID
-	if row.Media == "show" && row.EpisodeID == "" {
+	if row.Media == "show" && row.EpisodeID == "" ||
+		(row.Media == "movie" || row.Media == "game") && (row.State != "" || row.Date == "" && row.PlayedOn == "") {
 		if h.cfg.ApplyLibrary == nil {
 			return nil, nil, "", errors.New("library edit callback unavailable")
 		}
 		state := row.State
 		if state == "" {
-			state = "active"
+			if row.Media == "show" {
+				state = "active"
+			} else {
+				state = "planned"
+			}
 		}
 		patch := map[string]any{"state": state}
+		if row.Media == "game" {
+			playedOn := row.PlayedOn
+			if playedOn == "" {
+				playedOn = row.Date
+			}
+			if playedOn != "" {
+				patch["playedOn"] = playedOn
+			}
+			if row.Emulator != "" {
+				patch["emulator"] = row.Emulator
+			}
+		}
 		if row.Rating > 0 {
 			patch["rating"] = row.Rating
 		}
@@ -343,8 +481,12 @@ func (h *Handler) importCommand(batchID string, row ImportRow) (json.RawMessage,
 		return nil, nil, "", errors.New("unsupported media")
 	}
 	date := map[string]string{"precision": "unknown"}
-	if row.Date != "" {
-		date = map[string]string{"precision": "day", "day": row.Date}
+	occurredOn := row.Date
+	if occurredOn == "" && row.Media == "game" {
+		occurredOn = row.PlayedOn
+	}
+	if occurredOn != "" {
+		date = map[string]string{"precision": "day", "day": occurredOn}
 	}
 	command := map[string]any{"commandId": commandID, "titleId": row.MatchedTitleID, "baseVersion": *row.BaseVersion, "change": change, "occurredAt": date, "audience": map[string]string{"kind": "private"}, "spoiler": map[string]string{"kind": "none"}}
 	if row.Rating > 0 {

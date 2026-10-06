@@ -95,7 +95,14 @@ func ParseCSV(reader io.Reader, source string) ([]ImportRow, error) {
 		if state != "" && state != "planned" && state != "active" && state != "paused" && state != "dropped" && state != "completed" {
 			return nil, fmt.Errorf("invalid library state")
 		}
-		year, _ := strconv.Atoi(get(row, "year"))
+		year := 0
+		if raw := get(row, "year"); raw != "" {
+			parsedYear, yearErr := strconv.Atoi(raw)
+			if yearErr != nil || parsedYear < 1 {
+				return nil, fmt.Errorf("invalid year")
+			}
+			year = parsedYear
+		}
 		date := get(row, "watched date", "date")
 		if date != "" {
 			if _, err = time.Parse("2006-01-02", date); err != nil {

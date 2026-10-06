@@ -20,6 +20,12 @@ func TestCSVRejectsOversizedOrInvalidRatings(t *testing.T) {
 		t.Fatal("invalid rating accepted")
 	}
 }
+func TestCSVRejectsMalformedYearInsteadOfRemovingMatchConstraint(t *testing.T) {
+	_, err := ParseCSV(strings.NewReader("title,year\nDune,unknown\n"), "csv")
+	if err == nil {
+		t.Fatal("malformed year accepted as if no year had been supplied")
+	}
+}
 func TestCSVPreservesUnknownDateAndEmulator(t *testing.T) {
 	rows, err := ParseCSV(strings.NewReader("title,media,emulator,played_on,episode_id,state\nChrono Trigger,game,snes9x,Steam Deck,,active\n"), "csv")
 	if err != nil {
