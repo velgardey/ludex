@@ -2,6 +2,10 @@
 
 The user approved Go/PostgreSQL implementation on 7 October 2026. Local development uses a disposable PostgreSQL 18.6 cluster at port 55432, extracted into ignored `.local/tools/postgres` rather than installed system-wide. Existing Stage A SQLite files have integrity-checked snapshots and a checksum manifest in `.local/stage-a-snapshot`.
 
+## After workspace cleanup
+
+The October7 local cluster is stopped. Its cold data directory, Stage A snapshots, ignored env files and development signing material are preserved in a protected local backup; the extracted database tools, Android SDK/AVDs, Java17, Gradle caches and workspace dependencies were removed at the user's request. Reinstall prerequisites and follow [cleanup and recovery](cleanup-and-recovery.md) before using the local commands below. Historical verification below describes the pre-cleanup build.
+
 ## Run locally
 
 From `apps/backend`:

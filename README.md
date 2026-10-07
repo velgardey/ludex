@@ -4,6 +4,10 @@ An Android-first journal for films, series and games, with a companion website, 
 
 The current product API is Go + PostgreSQL in `apps/backend`. It uses direct Google OAuth and app-owned sessions, pgx typed SQL, durable progress commands and a separate import worker. Stage A's TypeScript/SQLite API remains available as a recovery/reference implementation; its tests are separate from Go integration tests.
 
+## Workspace after cleanup
+
+Development toolchains and generated caches were removed at the user's request on 7 October 2026. Source, lockfiles, environment templates and design evidence remain; install dependencies before using the commands below. The public GitHub repository and prerelease retain the source and latest build artifacts. See [cleanup and recovery](docs/operations/cleanup-and-recovery.md) for backup and restoration details.
+
 ## Run the product locally
 
 1. Prepare `apps/backend/.env.local` from the example and point it at a disposable development PostgreSQL database.
